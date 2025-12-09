@@ -62,10 +62,17 @@
               <option value="attackers">Targets for Attackers</option>
               <option value="raiders">Targets for Raiders</option>
             </select>
+
+            <div class="zoom-controls">
+              <button id="zoomOutBtn" class="btn btn-ghost btn-small">−</button>
+              <span id="zoomLabel" class="zoom-label">100%</span>
+              <button id="zoomInBtn" class="btn btn-ghost btn-small">+</button>
+              <button id="resetViewBtn" class="btn btn-ghost btn-small">Reset</button>
+            </div>
           </div>
         </div>
 
-        <div class="map-viewport">
+        <div class="map-viewport" id="mapViewport">
           <div id="map" class="map-grid">
             <!-- Nodes injected by script.js -->
           </div>
