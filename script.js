@@ -11,6 +11,11 @@ const VICTORY_CONFIG = {
   strategicTarget: 12,
 };
 
+// Pan/zoom config
+const MIN_SCALE = 0.6;
+const MAX_SCALE = 1.8;
+const SCALE_STEP = 0.2;
+
 // Territories with adjacency and effects
 const TERRITORIES = [
   {
@@ -138,11 +143,28 @@ let logEntries = [];
 let campaignState = { turn: 1 };
 let selectedId = null;
 
+// View / pan / zoom
+let viewState = {
+  scale: 1,
+  translateX: 0,
+  translateY: 0,
+};
+
+let isPanning = false;
+let panStart = { x: 0, y: 0 };
+let panOrigin = { x: 0, y: 0 };
+
 // ====== DOM ======
 
 const mapEl = document.getElementById("map");
+const mapViewportEl = document.getElementById("mapViewport");
 const showNamesToggle = document.getElementById("showNamesToggle");
 const targetFactionSelect = document.getElementById("targetFactionSelect");
+
+const zoomInBtn = document.getElementById("zoomInBtn");
+const zoomOutBtn = document.getElementById("zoomOutBtn");
+const resetViewBtn = document.getElementById("resetViewBtn");
+const zoomLabelEl = document.getElementById("zoomLabel");
 
 const noSelectionEl = document.getElementById("noSelection");
 const selectionPanelEl = document.getElementById("selectionPanel");
@@ -189,6 +211,7 @@ function init() {
   renderLog();
   updateTurnLabel();
   updateCampaignMeta();
+  applyMapTransform();
 }
 
 // ====== STATE LOAD/SAVE ======
@@ -212,7 +235,6 @@ function loadState() {
         lockedThisTurn: false,
       };
     } else {
-      // Ensure new fields exist
       if (typeof mapState[t.id].safe === "undefined") {
         mapState[t.id].safe = false;
       }
@@ -291,33 +313,26 @@ function renderMap() {
 
   updateLabelVisibility();
   updateTargetHighlighting();
+  applyMapTransform();
 }
 
 function applyNodeClasses(node, state) {
   node.className = "territory-node";
 
-  // Faction
   node.classList.add(`faction-${state.faction}`);
-
-  // Control
   node.classList.add(`control-${state.control}`);
 
-  // Safe
   if (state.safe) {
     node.classList.add("safe");
   }
 
-  // Locked this turn
   if (state.lockedThisTurn) {
     node.classList.add("locked-turn");
   }
 
-  // Selection
   if (node.dataset.id === selectedId) {
     node.classList.add("selected");
   }
-
-  // Target highlighting will be applied separately
 }
 
 function updateLabelVisibility() {
@@ -357,7 +372,6 @@ function onSelectTerritory(id) {
   safeToggleEl.checked = state.safe;
   lockedThisTurnToggleEl.checked = state.lockedThisTurn;
 
-  // Clear battle helper inputs
   battleNameInputEl.value = "";
   battlePointsInputEl.value = "";
 }
@@ -490,7 +504,6 @@ function hookEvents() {
     saveCampaign();
     updateTurnLabel();
 
-    // Clear per-turn locks
     TERRITORIES.forEach((t) => {
       mapState[t.id].lockedThisTurn = false;
     });
@@ -500,6 +513,82 @@ function hookEvents() {
     log(`=== Campaign Turn ${campaignState.turn} begins. Per-turn locks cleared. ===`);
     updateCampaignMeta();
   });
+
+  // Zoom buttons
+  zoomInBtn.addEventListener("click", () => adjustZoom(1));
+  zoomOutBtn.addEventListener("click", () => adjustZoom(-1));
+  resetViewBtn.addEventListener("click", resetView);
+
+  // Wheel zoom (optional nicety)
+  mapViewportEl.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 1 : -1;
+    adjustZoom(delta * 0.5); // smaller step with wheel
+  }, { passive: false });
+
+  // Panning (drag on background)
+  mapViewportEl.addEventListener("mousedown", onPanStart);
+  window.addEventListener("mousemove", onPanMove);
+  window.addEventListener("mouseup", onPanEnd);
+}
+
+// ====== PAN & ZOOM ======
+
+function applyMapTransform() {
+  mapEl.style.transform = `translate(${viewState.translateX}px, ${viewState.translateY}px) scale(${viewState.scale})`;
+  zoomLabelEl.textContent = `${Math.round(viewState.scale * 100)}%`;
+}
+
+function adjustZoom(step) {
+  let newScale;
+  if (Math.abs(step) === 1) {
+    // Button press: use fixed step
+    newScale = viewState.scale + (step > 0 ? SCALE_STEP : -SCALE_STEP);
+  } else {
+    // Wheel: step is scaled value (like 0.5 or -0.5)
+    newScale = viewState.scale + step * SCALE_STEP;
+  }
+
+  newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+  viewState.scale = newScale;
+  applyMapTransform();
+}
+
+function resetView() {
+  viewState = {
+    scale: 1,
+    translateX: 0,
+    translateY: 0,
+  };
+  applyMapTransform();
+}
+
+function onPanStart(e) {
+  // Only start panning if clicking on empty background of the viewport
+  if (e.target !== mapViewportEl && e.target !== mapEl) return;
+
+  isPanning = true;
+  mapViewportEl.classList.add("grabbing");
+  panStart.x = e.clientX;
+  panStart.y = e.clientY;
+  panOrigin.x = viewState.translateX;
+  panOrigin.y = viewState.translateY;
+}
+
+function onPanMove(e) {
+  if (!isPanning) return;
+  const dx = e.clientX - panStart.x;
+  const dy = e.clientY - panStart.y;
+
+  viewState.translateX = panOrigin.x + dx;
+  viewState.translateY = panOrigin.y + dy;
+  applyMapTransform();
+}
+
+function onPanEnd() {
+  if (!isPanning) return;
+  isPanning = false;
+  mapViewportEl.classList.remove("grabbing");
 }
 
 // ====== CONTROL HELPERS ======
@@ -581,50 +670,34 @@ function resolveBattle(winner) {
   const preFaction = state.faction;
   const preControl = state.control;
 
-  // Simple approximation of your described rules:
-  // - Attackers: 0 → 25 → 75 → 100
-  // - Defenders: if defending faction already holds the world at 75% and wins again,
-  //   they jump to 100% and the world becomes safe.
-
   if (winner === "attacker") {
-    // Attacker wins
     state.faction = attackerFaction;
-
     const idx = CONTROL_STEPS.indexOf(state.control);
     const newIdx = Math.min(CONTROL_STEPS.length - 1, idx + 1);
     state.control = CONTROL_STEPS[newIdx];
-    state.safe = false; // newly captured worlds aren't auto-safe
+    state.safe = false;
   } else {
-    // Defender wins
     state.faction = defenderFaction;
 
     if (preFaction === defenderFaction && preControl === 75) {
-      // “Second win” case: defender goes to 100 and world is safe
       state.control = 100;
       state.safe = true;
     } else if (preFaction === defenderFaction && preControl < 75) {
-      // Defender consolidates from a lower level
       state.control = 75;
       state.safe = false;
     } else if (preFaction !== defenderFaction && preControl > 0) {
-      // World was held by someone else; reset them and give defender 75%
       state.control = 75;
       state.safe = false;
     } else if (preFaction === defenderFaction && preControl === 100) {
-      // Already maxed
       state.control = 100;
     } else {
-      // Default: give defender a strong hold
       state.control = 75;
     }
   }
 
-  // Mark the world as "used" this turn
   state.lockedThisTurn = true;
-
   saveState();
 
-  // Update UI
   controlPercentEl.textContent = `${state.control}%`;
   updateControlLabel(state.control);
   updateEffectHighlight(state.control);
@@ -634,7 +707,6 @@ function resolveBattle(winner) {
   const node = mapEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
   if (node) applyNodeClasses(node, state);
 
-  // Build log message
   const battleName = battleNameInputEl.value.trim();
   const battlePoints = battlePointsInputEl.value.trim();
 
@@ -652,7 +724,6 @@ function resolveBattle(winner) {
 
   log(msg);
 
-  // Clear helper fields for next battle
   battleNameInputEl.value = "";
   battlePointsInputEl.value = "";
 
@@ -671,7 +742,6 @@ function updateTargetHighlighting() {
     node.classList.remove("target-legal", "target-illegal");
 
     if (!attackingFaction) {
-      // No highlighting
       return;
     }
 
@@ -686,27 +756,20 @@ function updateTargetHighlighting() {
 function isAttackable(territoryId, attackingFaction) {
   const state = mapState[territoryId];
 
-  // Cannot attack if safe or already used this turn
   if (state.safe || state.lockedThisTurn) return false;
-
-  // Cannot attack if already yours
   if (state.faction === attackingFaction) return false;
 
-  // Unclaimed worlds adjacent to your holdings are valid
   const territory = TERRITORIES.find((t) => t.id === territoryId);
   if (!territory) return false;
 
-  // Check adjacency
   const neighbors = territory.neighbors || [];
   const hasAdjacentWorld = neighbors.some((nid) => {
     const ns = mapState[nid];
     return ns && ns.faction === attackingFaction;
   });
 
-  // If you have an adjacent world or it's unclaimed anywhere, it's attackable
   if (hasAdjacentWorld) return true;
 
-  // Optionally, allow attacking unclaimed worlds from anywhere
   if (state.faction === "unclaimed") return true;
 
   return false;
