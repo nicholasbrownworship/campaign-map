@@ -34,7 +34,12 @@ body {
 
 body {
   font-family: var(--font-sans);
-  background: radial-gradient(circle at top, #050816 0, #020309 60%);
+  /* TRUE STARFIELD LIVES HERE – never zooms */
+  background-image: url("images/starfield.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text);
 }
 
@@ -190,7 +195,8 @@ body {
 /* Map panel */
 
 .map-panel {
-  background: radial-gradient(circle at top, #020617 0, #020617 50%, #020617 100%);
+  /* Slightly translucent so starfield vibes still show through */
+  background: rgba(2, 6, 23, 0.8);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--border-soft);
@@ -301,21 +307,21 @@ body {
   overflow: hidden;
   cursor: grab;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-
-  /* TRUE STARFIELD BACKGROUND */
-  background-image: url("images/starfield.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: transparent; /* no image here – starfield is on body */
 }
 
-/* Optional subtle vignette over the starfield to keep UI readable */
+/* Soft vignette to keep UI readable while still seeing stars */
 .map-viewport::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at center, transparent 0, transparent 70%, rgba(0,0,0,0.35) 100%);
+  background: radial-gradient(
+    circle at center,
+    transparent 0,
+    transparent 70%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
 }
 
 .map-viewport.grabbing {
@@ -330,19 +336,19 @@ body {
   border-radius: calc(var(--radius-lg) - 6px);
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.6);
-  background: transparent;
-  backdrop-filter: none;
+
+  /* VERY light tint so starfield still shows through */
+  background: rgba(3, 7, 18, 0.25);
+  backdrop-filter: blur(2px);
 }
 
-
-
-/* Planets layer: moves & zooms. NO dots/grid on this layer. */
+/* Planets layer: moves & zooms. NO grid/dot texture here. */
 .map-layer {
   position: relative;
   width: 100%;
   height: 100%;
   transform-origin: center center;
-  /* No background pattern here – just transparent */
+  /* keep transparent so it feels like they float in space */
 }
 
 /* Territory nodes */
@@ -469,7 +475,7 @@ body {
 /* Sidebar */
 
 .sidebar {
-  background: radial-gradient(circle at top, #020617 0, #020617 60%, #020617);
+  background: rgba(2, 6, 23, 0.9);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--border-soft);
