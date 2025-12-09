@@ -143,11 +143,14 @@ body {
   grid-template-columns: minmax(0, 2fr) minmax(320px, 420px);
   gap: 14px;
   padding: 14px 18px 18px;
+  height: calc(100vh - 64px); /* constrain row height */
+  min-height: 0;
 }
 
 @media (max-width: 900px) {
   .app-main {
     grid-template-columns: 1fr;
+    height: auto; /* on mobile let it grow naturally */
   }
 }
 
@@ -323,7 +326,7 @@ body {
 }
 
 .territory-node:hover {
-  transform: translate(-50%, -50%) + scale(1.04);
+  transform: translate(-50%, -50%) scale(1.04);
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.8),
     0 0 24px rgba(59, 130, 246, 0.6);
 }
@@ -435,6 +438,7 @@ body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  overflow: hidden; /* keep internal scrollables from growing the column */
 }
 
 .sidebar-section {
@@ -719,14 +723,13 @@ input[type="text"] {
 
 .log-container {
   flex: 1;
-  min-height: 80px;
-  max-height: 260px;
+  min-height: 0;
   margin-top: 6px;
   padding: 6px 8px;
   border-radius: 10px;
   background: #020617;
   border: 1px solid var(--border-soft);
-  overflow-y: auto;
+  overflow-y: auto; /* scroll here instead of growing sidebar */
   font-size: 0.75rem;
 }
 
