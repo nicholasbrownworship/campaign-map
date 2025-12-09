@@ -143,14 +143,14 @@ body {
   grid-template-columns: minmax(0, 2fr) minmax(320px, 420px);
   gap: 14px;
   padding: 14px 18px 18px;
-  height: calc(100vh - 64px); /* constrain row height */
+  height: calc(100vh - 64px);
   min-height: 0;
 }
 
 @media (max-width: 900px) {
   .app-main {
     grid-template-columns: 1fr;
-    height: auto; /* on mobile let it grow naturally */
+    height: auto;
   }
 }
 
@@ -272,11 +272,38 @@ body {
   color: var(--text);
 }
 
+/* Zoom controls */
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 999px;
+  padding: 2px 4px;
+  border: 1px solid var(--border-soft);
+}
+
+.zoom-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 46px;
+  text-align: center;
+}
+
+/* Map viewport */
+
 .map-viewport {
   position: relative;
   flex: 1;
   padding: 10px;
   min-height: 320px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.map-viewport.grabbing {
+  cursor: grabbing;
 }
 
 .map-grid {
@@ -291,6 +318,7 @@ body {
     #020617;
   overflow: hidden;
   border: 1px solid var(--border-soft);
+  transform-origin: center center;
 }
 
 /* Star field */
@@ -438,7 +466,7 @@ body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
-  overflow: hidden; /* keep internal scrollables from growing the column */
+  overflow: hidden;
 }
 
 .sidebar-section {
@@ -729,7 +757,7 @@ input[type="text"] {
   border-radius: 10px;
   background: #020617;
   border: 1px solid var(--border-soft);
-  overflow-y: auto; /* scroll here instead of growing sidebar */
+  overflow-y: auto;
   font-size: 0.75rem;
 }
 
