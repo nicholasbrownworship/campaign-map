@@ -130,14 +130,6 @@ const FACTIONS = {
 
 // ====== STATE ======
 
-/**
- * mapState[territoryId] = {
- *   faction: "defenders" | "attackers" | "raiders" | "unclaimed",
- *   control: 0 | 25 | 75 | 100,
- *   safe: boolean,
- *   lockedThisTurn: boolean
- * }
- */
 let mapState = {};
 let logEntries = [];
 let campaignState = { turn: 1 };
@@ -156,7 +148,7 @@ let panOrigin = { x: 0, y: 0 };
 
 // ====== DOM ======
 
-const mapEl = document.getElementById("map");
+const mapLayerEl = document.getElementById("map");      // inner moving layer
 const mapViewportEl = document.getElementById("mapViewport");
 const showNamesToggle = document.getElementById("showNamesToggle");
 const targetFactionSelect = document.getElementById("targetFactionSelect");
@@ -282,7 +274,7 @@ function saveCampaign() {
 // ====== MAP RENDERING ======
 
 function renderMap() {
-  mapEl.innerHTML = "";
+  mapLayerEl.innerHTML = "";
 
   TERRITORIES.forEach((t) => {
     const state = mapState[t.id];
@@ -304,11 +296,12 @@ function renderMap() {
 
     applyNodeClasses(node, state);
 
-    node.addEventListener("click", () => {
+    node.addEventListener("click", (e) => {
+      e.stopPropagation();
       onSelectTerritory(t.id);
     });
 
-    mapEl.appendChild(node);
+    mapLayerEl.appendChild(node);
   });
 
   updateLabelVisibility();
@@ -337,7 +330,7 @@ function applyNodeClasses(node, state) {
 
 function updateLabelVisibility() {
   const show = showNamesToggle.checked;
-  mapEl.querySelectorAll(".territory-label").forEach((label) => {
+  mapLayerEl.querySelectorAll(".territory-label").forEach((label) => {
     label.style.display = show ? "block" : "none";
   });
 }
@@ -347,7 +340,7 @@ function updateLabelVisibility() {
 function onSelectTerritory(id) {
   selectedId = id;
 
-  mapEl.querySelectorAll(".territory-node").forEach((node) => {
+  mapLayerEl.querySelectorAll(".territory-node").forEach((node) => {
     node.classList.toggle("selected", node.dataset.id === id);
   });
 
@@ -422,7 +415,7 @@ function hookEvents() {
     state.faction = factionSelectEl.value;
     saveState();
 
-    const node = mapEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
+    const node = mapLayerEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
     if (node) applyNodeClasses(node, state);
 
     log(`${t.name}: controlling faction set to ${FACTIONS[state.faction]} (was ${FACTIONS[oldFaction]}).`);
@@ -440,7 +433,7 @@ function hookEvents() {
     state.safe = safeToggleEl.checked;
     saveState();
 
-    const node = mapEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
+    const node = mapLayerEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
     if (node) applyNodeClasses(node, state);
 
     log(`${t.name}: marked as ${state.safe ? "SAFE (locked from attack)" : "no longer safe"}.`);
@@ -454,7 +447,7 @@ function hookEvents() {
     state.lockedThisTurn = lockedThisTurnToggleEl.checked;
     saveState();
 
-    const node = mapEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
+    const node = mapLayerEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
     if (node) applyNodeClasses(node, state);
 
     log(`${t.name}: battle slot for this turn ${state.lockedThisTurn ? "used" : "cleared"}.`);
@@ -519,14 +512,18 @@ function hookEvents() {
   zoomOutBtn.addEventListener("click", () => adjustZoom(-1));
   resetViewBtn.addEventListener("click", resetView);
 
-  // Wheel zoom (optional nicety)
-  mapViewportEl.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 1 : -1;
-    adjustZoom(delta * 0.5); // smaller step with wheel
-  }, { passive: false });
+  // Wheel zoom
+  mapViewportEl.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1 : -1;
+      adjustZoom(delta * 0.5);
+    },
+    { passive: false }
+  );
 
-  // Panning (drag on background)
+  // Panning: only when clicking empty space
   mapViewportEl.addEventListener("mousedown", onPanStart);
   window.addEventListener("mousemove", onPanMove);
   window.addEventListener("mouseup", onPanEnd);
@@ -535,17 +532,15 @@ function hookEvents() {
 // ====== PAN & ZOOM ======
 
 function applyMapTransform() {
-  mapEl.style.transform = `translate(${viewState.translateX}px, ${viewState.translateY}px) scale(${viewState.scale})`;
+  mapLayerEl.style.transform = `translate(${viewState.translateX}px, ${viewState.translateY}px) scale(${viewState.scale})`;
   zoomLabelEl.textContent = `${Math.round(viewState.scale * 100)}%`;
 }
 
 function adjustZoom(step) {
   let newScale;
   if (Math.abs(step) === 1) {
-    // Button press: use fixed step
     newScale = viewState.scale + (step > 0 ? SCALE_STEP : -SCALE_STEP);
   } else {
-    // Wheel: step is scaled value (like 0.5 or -0.5)
     newScale = viewState.scale + step * SCALE_STEP;
   }
 
@@ -564,8 +559,8 @@ function resetView() {
 }
 
 function onPanStart(e) {
-  // Only start panning if clicking on empty background of the viewport
-  if (e.target !== mapViewportEl && e.target !== mapEl) return;
+  // Don't start panning if we clicked a node or label
+  if (e.target.closest(".territory-node")) return;
 
   isPanning = true;
   mapViewportEl.classList.add("grabbing");
@@ -617,7 +612,7 @@ function adjustControl(direction) {
   updateControlLabel(newControl);
   updateEffectHighlight(newControl);
 
-  const node = mapEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
+  const node = mapLayerEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
   if (node) applyNodeClasses(node, state);
 
   log(`${t.name}: control changed from ${oldControl}% to ${newControl}%.`);
@@ -640,7 +635,7 @@ function cycleControl() {
   updateControlLabel(newControl);
   updateEffectHighlight(newControl);
 
-  const node = mapEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
+  const node = mapLayerEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
   if (node) applyNodeClasses(node, state);
 
   log(`${t.name}: control cycled from ${oldControl}% to ${newControl}%.`);
@@ -704,7 +699,7 @@ function resolveBattle(winner) {
   safeToggleEl.checked = state.safe;
   lockedThisTurnToggleEl.checked = state.lockedThisTurn;
 
-  const node = mapEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
+  const node = mapLayerEl.querySelector(`.territory-node[data-id="${selectedId}"]`);
   if (node) applyNodeClasses(node, state);
 
   const battleName = battleNameInputEl.value.trim();
@@ -735,7 +730,7 @@ function resolveBattle(winner) {
 function updateTargetHighlighting() {
   const attackingFaction = targetFactionSelect.value;
 
-  mapEl.querySelectorAll(".territory-node").forEach((node) => {
+  mapLayerEl.querySelectorAll(".territory-node").forEach((node) => {
     const id = node.dataset.id;
     const state = mapState[id];
 
@@ -769,7 +764,6 @@ function isAttackable(territoryId, attackingFaction) {
   });
 
   if (hasAdjacentWorld) return true;
-
   if (state.faction === "unclaimed") return true;
 
   return false;
@@ -808,14 +802,10 @@ function renderFactionOverview() {
     if (s.control === 100) {
       bucket.worlds100 += 1;
       bucket.strategic100 += t.strategicValue;
-      if (t.effect100) {
-        bucket.buffs.push(`${t.name}: ${t.effect100}`);
-      }
+      if (t.effect100) bucket.buffs.push(`${t.name}: ${t.effect100}`);
     } else if (s.control === 75) {
       bucket.worlds75 += 1;
-      if (t.effect75) {
-        bucket.buffs.push(`${t.name}: ${t.effect75}`);
-      }
+      if (t.effect75) bucket.buffs.push(`${t.name}: ${t.effect75}`);
     } else if (s.control === 25) {
       bucket.worlds25 += 1;
     }
@@ -870,8 +860,7 @@ function renderFactionOverview() {
     if (data.buffs.length === 0) {
       buffsEl.textContent = "No active buffs from territories.";
     } else {
-      buffsEl.innerHTML =
-        "<strong>Active buffs:</strong> " + data.buffs.join(" · ");
+      buffsEl.innerHTML = "<strong>Active buffs:</strong> " + data.buffs.join(" · ");
     }
 
     card.appendChild(header);
