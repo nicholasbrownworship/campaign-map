@@ -315,7 +315,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at center, transparent 0, transparent 60%, rgba(0,0,0,0.6) 100%);
+  background: radial-gradient(circle at center, transparent 0, transparent 70%, rgba(0,0,0,0.35) 100%);
 }
 
 .map-viewport.grabbing {
@@ -330,13 +330,11 @@ body {
   border-radius: calc(var(--radius-lg) - 6px);
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.6);
-  background: linear-gradient(
-    to bottom,
-    rgba(15, 23, 42, 0.72),
-    rgba(15, 23, 42, 0.92)
-  );
-  backdrop-filter: blur(6px);
+  background: transparent;
+  backdrop-filter: none;
 }
+
+
 
 /* Planets layer: moves & zooms. NO dots/grid on this layer. */
 .map-layer {
