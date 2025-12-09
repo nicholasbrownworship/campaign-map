@@ -34,12 +34,8 @@ body {
 
 body {
   font-family: var(--font-sans);
-  /* TRUE STARFIELD LIVES HERE – never zooms */
-  background-image: url("images/starfield.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  /* page background, NOT the starfield */
+  background: radial-gradient(circle at top, #050816 0, #020309 60%);
   color: var(--text);
 }
 
@@ -195,8 +191,7 @@ body {
 /* Map panel */
 
 .map-panel {
-  /* Slightly translucent so starfield vibes still show through */
-  background: rgba(2, 6, 23, 0.8);
+  background: rgba(2, 6, 23, 0.9);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--border-soft);
@@ -307,10 +302,15 @@ body {
   overflow: hidden;
   cursor: grab;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: transparent; /* no image here – starfield is on body */
+
+  /* STARFIELD ONLY IN THIS SECTION */
+  background-image: url("images/starfield.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
-/* Soft vignette to keep UI readable while still seeing stars */
+/* Soft vignette so UI is readable but stars still visible */
 .map-viewport::before {
   content: "";
   position: absolute;
@@ -337,18 +337,18 @@ body {
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.6);
 
-  /* VERY light tint so starfield still shows through */
+  /* VERY light tint so the starfield still shows through */
   background: rgba(3, 7, 18, 0.25);
   backdrop-filter: blur(2px);
 }
 
-/* Planets layer: moves & zooms. NO grid/dot texture here. */
+/* Planets layer: moves & zooms. NO background pattern here. */
 .map-layer {
   position: relative;
   width: 100%;
   height: 100%;
   transform-origin: center center;
-  /* keep transparent so it feels like they float in space */
+  /* transparent – just nodes and labels */
 }
 
 /* Territory nodes */
@@ -468,14 +468,18 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   padding: 2px 6px;
   border-radius: 999px;
-  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.97));
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.92),
+    rgba(15, 23, 42, 0.97)
+  );
   border: 1px solid rgba(31, 41, 55, 0.9);
 }
 
 /* Sidebar */
 
 .sidebar {
-  background: rgba(2, 6, 23, 0.9);
+  background: rgba(2, 6, 23, 0.95);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--border-soft);
