@@ -17,7 +17,16 @@
           <p>Territory control tracker • 0–25–75–100</p>
         </div>
       </div>
+
+      <div class="header-center">
+        <div id="victoryBanner" class="victory-banner hidden"></div>
+      </div>
+
       <div class="header-actions">
+        <div class="turn-box">
+          <span id="turnLabel" class="turn-label">Turn 1</span>
+          <button id="nextTurnBtn" class="btn btn-ghost btn-small">Next Turn</button>
+        </div>
         <button id="resetMapBtn" class="btn btn-ghost">Reset Map</button>
       </div>
     </header>
@@ -40,11 +49,19 @@
               <span class="legend-dot unclaimed"></span> Unclaimed
             </span>
           </div>
+
           <div class="map-toolbar-right">
             <label class="toggle">
               <input type="checkbox" id="showNamesToggle" checked />
               <span>Show labels</span>
             </label>
+
+            <select id="targetFactionSelect" class="target-select">
+              <option value="">Targets: show all</option>
+              <option value="defenders">Targets for Defenders</option>
+              <option value="attackers">Targets for Attackers</option>
+              <option value="raiders">Targets for Raiders</option>
+            </select>
           </div>
         </div>
 
@@ -57,10 +74,11 @@
 
       <!-- SIDEBAR PANEL -->
       <aside class="sidebar">
+        <!-- Territory Inspector -->
         <div class="sidebar-section">
           <h2>Territory Inspector</h2>
           <div id="noSelection" class="empty-state">
-            <p>Select a territory on the map to edit its control.</p>
+            <p>Select a territory on the map to edit its control and resolve battles.</p>
           </div>
 
           <div id="selectionPanel" class="selection-panel hidden">
@@ -71,7 +89,7 @@
             </p>
 
             <div class="field-group">
-              <label for="factionSelect">Controlling faction</label>
+              <label for="factionSelect">Current controlling faction</label>
               <select id="factionSelect">
                 <option value="unclaimed">Unclaimed</option>
                 <option value="defenders">Defenders</option>
@@ -94,18 +112,89 @@
             </div>
 
             <div class="field-group">
+              <label>Control effects</label>
+              <div id="effect75" class="effect-line">
+                <span class="effect-tag">75%</span>
+                <span class="effect-text"></span>
+              </div>
+              <div id="effect100" class="effect-line">
+                <span class="effect-tag">100%</span>
+                <span class="effect-text"></span>
+              </div>
+            </div>
+
+            <div class="field-group">
               <label class="toggle">
                 <input type="checkbox" id="safeToggle" />
                 <span>Mark as “Safe” (locked from attack)</span>
               </label>
               <p class="help-text">
-                “Safe” worlds represent fully secured territories that can’t be chosen as targets
-                until conditions change in the campaign.
+                “Safe” worlds are fully secured and cannot be chosen as targets until manually unlocked.
+              </p>
+            </div>
+
+            <div class="field-group">
+              <label class="toggle">
+                <input type="checkbox" id="lockedThisTurnToggle" />
+                <span>Lock for this turn (already fought here)</span>
+              </label>
+              <p class="help-text">
+                This is automatically cleared when you advance the campaign turn.
+              </p>
+            </div>
+
+            <!-- Battle Resolver -->
+            <div class="battle-section">
+              <h4>Battle Result Helper</h4>
+              <div class="field-group">
+                <label>Battle factions</label>
+                <div class="battle-row">
+                  <div class="battle-column">
+                    <span class="battle-label">Attacker</span>
+                    <select id="battleAttackerSelect">
+                      <option value="">—</option>
+                      <option value="defenders">Defenders</option>
+                      <option value="attackers">Attackers</option>
+                      <option value="raiders">Raiders</option>
+                    </select>
+                  </div>
+                  <div class="battle-column">
+                    <span class="battle-label">Defender</span>
+                    <select id="battleDefenderSelect">
+                      <option value="">—</option>
+                      <option value="defenders">Defenders</option>
+                      <option value="attackers">Attackers</option>
+                      <option value="raiders">Raiders</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label>Battle details (optional)</label>
+                <input id="battleNameInput" type="text" placeholder="Mission / notes (e.g. Incursion – Tide of Conviction)" />
+                <input id="battlePointsInput" type="text" placeholder="Points (e.g. 1500)" />
+              </div>
+
+              <div class="field-group battle-buttons">
+                <button id="attackerWinBtn" class="btn btn-small">Attacker Won</button>
+                <button id="defenderWinBtn" class="btn btn-small">Defender Won</button>
+              </div>
+
+              <p class="help-text">
+                Applying a result advances control according to your campaign rules and writes a log entry for the battle.
               </p>
             </div>
           </div>
         </div>
 
+        <!-- Faction Overview -->
+        <div class="sidebar-section">
+          <h2>Faction Overview</h2>
+          <div id="factionOverview" class="faction-overview"></div>
+        </div>
+
+        <!-- Campaign Log -->
         <div class="sidebar-section log-section">
           <h2>Campaign Log</h2>
           <div id="logContainer" class="log-container">
