@@ -3,66 +3,82 @@
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
 const TERRITORIES = [
-  // Region Alpha – "Bastior Reach" (good for Defenders)
-  { id: "magnus_relay",    name: "Magnus Relay",    x: 18, y: 72, z: 4 },
-  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 24, y: 88, z: -5 },
-  { id: "osiron_spur",     name: "Osiron Spur",     x: 30, y: 80, z: -10 },
-  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 32, y: 62, z: 12 },
-  { id: "bastior_prime",   name: "Bastior Prime",   x: 45, y: 60, z: 0 },
-  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 40, y: 68, z: 8 },
+  // === DEFENDERS HOME REGION – "Bastior Reach" (top) ===
+  { id: "bastior_prime",   name: "Bastior Prime",   x: 50, y: 82, z: 5 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 42, y: 88, z: 8 },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 58, y: 90, z: 2 },
 
-  // Region Beta – "Karst Expanse" (good for Attackers)
-  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 64, y: 82, z: 15 },
-  { id: "vorun_halo",      name: "Vorun Halo",      x: 72, y: 90, z: 2 },
-  { id: "veldras_gate",    name: "Veldras Gate",    x: 82, y: 72, z: -15 },
-  { id: "karst_forge",     name: "Karst Forge",     x: 78, y: 58, z: 12 },
-  { id: "voryn_crossing",  name: "Voryn Crossing",  x: 64, y: 60, z: 6 },
-  { id: "cinder_wake",     name: "Cinder Wake",     x: 88, y: 60, z: -8 },
-  { id: "silas_gate",      name: "Silas Gate",      x: 72, y: 52, z: -12 },
+  // === RAIDERS HOME REGION – "Harkanis Fringe" (bottom-left) ===
+  { id: "harkanis",        name: "Harkanis",        x: 22, y: 18, z: -8 },
+  { id: "emberhold",       name: "Emberhold",       x: 30, y: 16, z: 4 },
+  { id: "magnus_relay",    name: "Magnus Relay",    x: 26, y: 26, z: 0 },
 
-  // Region Gamma – "Harkanis Fringe" (good for Raiders)
-  { id: "harkanis",        name: "Harkanis",        x: 30, y: 32, z: -10 },
-  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 44, y: 22, z: -18 },
-  { id: "emberhold",       name: "Emberhold",       x: 36, y: 16, z: 5 },
-  { id: "threnos_void",    name: "Threnos Void",    x: 22, y: 18, z: 16 },
-  { id: "helios_spine",    name: "Helios Spine",    x: 60, y: 26, z: 10 }
+  // === ATTACKERS HOME REGION – "Karst Expanse" (bottom-right) ===
+  { id: "karst_forge",     name: "Karst Forge",     x: 78, y: 18, z: 6 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x: 86, y: 24, z: -6 },
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 74, y: 26, z: 10 },
+
+  // === WILD SPACE – central contested region (9 worlds) ===
+  { id: "voryn_crossing",  name: "Voryn Crossing",  x: 50, y: 60, z: 0 },
+  { id: "osiron_spur",     name: "Osiron Spur",     x: 38, y: 60, z: -4 },
+  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 62, y: 64, z: 3 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x: 70, y: 52, z: 1 },
+  { id: "cinder_wake",     name: "Cinder Wake",     x: 60, y: 44, z: -3 },
+  { id: "silas_gate",      name: "Silas Gate",      x: 40, y: 44, z: 2 },
+  { id: "threnos_void",    name: "Threnos Void",    x: 32, y: 52, z: 5 },
+  { id: "helios_spine",    name: "Helios Spine",    x: 54, y: 34, z: 4 },
+  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 46, y: 40, z: -5 }
 ];
 
-
-// Nearest-neighbor-ish ring around the sector
 const WARP_LANES = [
-  // Region Alpha web
-  ["magnus_relay",   "osiron_spur"],
-  ["magnus_relay",   "duskfall_watch"],
-  ["duskfall_watch", "kethrax_deep"],
-  ["osiron_spur",    "aurum_refuge"],
-  ["aurum_refuge",   "bastior_prime"],
+  // === DEFENDER HOME – Bastior Reach (triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
-  ["trinaxis_minor", "kethrax_deep"],
+  ["trinaxis_minor", "aurum_refuge"],
+  ["aurum_refuge",   "bastior_prime"],
 
-  // Region Beta web
-  ["kethrax_deep",   "vorun_halo"],
-  ["vorun_halo",     "veldras_gate"],
-  ["veldras_gate",   "karst_forge"],
-  ["karst_forge",    "voryn_crossing"],
-  ["voryn_crossing", "bastior_prime"],
-  ["karst_forge",    "silas_gate"],
-  ["silas_gate",     "cinder_wake"],
-  ["cinder_wake",    "vorun_halo"],
-
-  // Region Gamma web
+  // === RAIDER HOME – Harkanis Fringe (triangle) ===
   ["harkanis",       "emberhold"],
-  ["harkanis",       "nadir_outpost"],
-  ["nadir_outpost",  "threnos_void"],
-  ["threnos_void",   "emberhold"],
-  ["emberhold",      "helios_spine"],
+  ["emberhold",      "magnus_relay"],
+  ["magnus_relay",   "harkanis"],
 
-  // Cross-region bridges
-  ["helios_spine",   "veldras_gate"],   // Gamma → Beta
-  ["kethrax_deep",   "trinaxis_minor"], // Alpha → Beta (already above)
-  ["voryn_crossing", "bastior_prime"]   // Alpha ↔ Beta (already above)
+  // === ATTACKER HOME – Karst Expanse (triangle) ===
+  ["karst_forge",    "veldras_gate"],
+  ["veldras_gate",   "kethrax_deep"],
+  ["kethrax_deep",   "karst_forge"],
+
+  // === Home → Wild connections (multiple paths for each team) ===
+  // Defenders into wild space
+  ["bastior_prime",  "voryn_crossing"],
+  ["trinaxis_minor", "osiron_spur"],
+  ["aurum_refuge",   "duskfall_watch"],
+
+  // Raiders into wild space
+  ["harkanis",       "threnos_void"],
+  ["magnus_relay",   "silas_gate"],
+  ["emberhold",      "nadir_outpost"],
+
+  // Attackers into wild space
+  ["karst_forge",    "vorun_halo"],
+  ["veldras_gate",   "duskfall_watch"],
+  ["kethrax_deep",   "cinder_wake"],
+
+  // === Wild-space web (central contested region) ===
+  // Large ring:
+  ["voryn_crossing", "duskfall_watch"],
+  ["duskfall_watch", "vorun_halo"],
+  ["vorun_halo",     "cinder_wake"],
+  ["cinder_wake",    "helios_spine"],
+  ["helios_spine",   "silas_gate"],
+  ["silas_gate",     "threnos_void"],
+  ["threnos_void",   "osiron_spur"],
+  ["osiron_spur",    "voryn_crossing"],
+
+  // Extra links so it's not a single loop:
+  ["nadir_outpost",  "helios_spine"],
+  ["nadir_outpost",  "osiron_spur"],
+  ["voryn_crossing", "nadir_outpost"],
+  ["cinder_wake",    "silas_gate"]
 ];
-
 
 
 // ---------- STATE ----------
