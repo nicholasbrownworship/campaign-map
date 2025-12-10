@@ -80,29 +80,29 @@ const WARP_LANES = [
   ["cinder_wake",    "silas_gate"]
 ];
 
-// Per-planet base colors (for "planet-y" look)
+// Base “planet personality” colors (nothing pure black)
 const PLANET_BASE_COLORS = {
   bastior_prime:  0xf5d87a,
   trinaxis_minor: 0x7ac0f5,
   aurum_refuge:   0xe6f2c2,
 
-  harkanis:       0x7b1f1f,
-  emberhold:      0xff8a3c,
-  magnus_relay:   0xb0b0b0,
+  harkanis:       0x8c2f2f,
+  emberhold:      0xff9b4d,
+  magnus_relay:   0xc0c4cc,
 
   karst_forge:    0xffb347,
-  veldras_gate:   0x9d8cff,
-  kethrax_deep:   0x4dbd8b,
+  veldras_gate:   0xa79cff,
+  kethrax_deep:   0x5fd3a0,
 
-  voryn_crossing: 0xccccff,
-  osiron_spur:    0x9fa7b3,
-  duskfall_watch: 0x505b86,
-  vorun_halo:     0xf2f0ff,
-  cinder_wake:    0x4a4038,
-  silas_gate:     0xaee1ff,
-  threnos_void:   0x1e2230,
-  helios_spine:   0xffe8b3,
-  nadir_outpost:  0x7f8b99
+  voryn_crossing: 0xd8d8ff,
+  osiron_spur:    0xa7b4c4,
+  duskfall_watch: 0x5a6791,
+  vorun_halo:     0xf5f3ff,
+  cinder_wake:    0x5a4a3a,
+  silas_gate:     0xb7e6ff,
+  threnos_void:   0x283044,
+  helios_spine:   0xffebbb,
+  nadir_outpost:  0x8a96a5
 };
 
 
@@ -122,18 +122,21 @@ let raycaster, pointer;
 let warpLaneGroup;
 
 // manual orbit / zoom
-let zoomFactor = 0.9; // start slightly farther out
-const MIN_ZOOM = 0.6;
-const MAX_ZOOM = 1.6;
-const cameraBaseDistance = 320; // farther camera → whole map feels smaller
+const DEFAULT_ZOOM = 0.75;
+let zoomFactor = DEFAULT_ZOOM; // start fairly zoomed OUT
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.0;
+const cameraBaseDistance = 460; // farther camera → whole map fits easier
 let orbitPhi = Math.PI / 3; // vertical angle
 let orbitTheta = Math.PI / 6; // horizontal angle
+let orbitTarget = new THREE.Vector3(0, 0, 0); // what the camera orbits/looks at
+
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
 // how much Z depth matters visually
-const Z_DEPTH_FACTOR = 4; // px per z-unit for position
+const Z_DEPTH_FACTOR = 4;
 
 // UI elements
 let turnLabelEl, zoomLabelEl;
@@ -249,17 +252,17 @@ function init3DScene() {
   renderer.setPixelRatio(window.devicePixelRatio);
 
   // Lights
-  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.75);
   scene.add(ambient);
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
   dirLight.position.set(80, 120, 100);
   scene.add(dirLight);
 
-  // Starfield
+  // Starfield backdrop
   const starsGeometry = new THREE.BufferGeometry();
-  const starCount = 2500;
+  const starCount = 2600;
   const positions = new Float32Array(starCount * 3);
-  const radius = 1000;
+  const radius = 1100;
 
   for (let i = 0; i < starCount; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
@@ -285,9 +288,23 @@ function init3DScene() {
   const starField = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starField);
 
+  // Starmap "disc" under the nodes (wireframe circle grid)
+  const gridRadius = 260;
+  const gridGeom = new THREE.CircleGeometry(gridRadius, 64);
+  const gridMat = new THREE.MeshBasicMaterial({
+    color: 0x111827,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.5
+  });
+  const grid = new THREE.Mesh(gridGeom, gridMat);
+  grid.rotation.x = -Math.PI / 2; // lie flat in XZ plane
+  grid.position.y = -10; // just beneath the nodes
+  scene.add(grid);
+
   // Territory spheres (smaller + more depth)
-  const baseRadius = 6;     // was 8
-  const spread = 4.5;       // was 5.5, so layout is tighter
+  const baseRadius = 6;
+  const spread = 3.8; // slightly tighter than before
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
     const y = (t.y - 50) * -spread;
@@ -298,7 +315,7 @@ function init3DScene() {
       color: 0x9ca3af,
       shininess: 40,
       specular: 0x555555,
-      emissive: 0x000000
+      emissive: 0x050712 // tiny base emissive so nothing goes to pure black
     });
 
     const mesh = new THREE.Mesh(geom, mat);
@@ -370,12 +387,17 @@ function animate() {
 
 function updateCameraPosition() {
   const r = cameraBaseDistance / zoomFactor; // zoomFactor up => closer
-  const x = r * Math.sin(orbitPhi) * Math.cos(orbitTheta);
-  const y = r * Math.cos(orbitPhi);
-  const z = r * Math.sin(orbitPhi) * Math.sin(orbitTheta);
 
-  camera.position.set(x, y, z);
-  camera.lookAt(0, 0, 0);
+  const dirX = Math.sin(orbitPhi) * Math.cos(orbitTheta);
+  const dirY = Math.cos(orbitPhi);
+  const dirZ = Math.sin(orbitPhi) * Math.sin(orbitTheta);
+
+  camera.position.set(
+    orbitTarget.x + dirX * r,
+    orbitTarget.y + dirY * r,
+    orbitTarget.z + dirZ * r
+  );
+  camera.lookAt(orbitTarget);
   camera.updateProjectionMatrix();
 
   if (zoomLabelEl) {
@@ -464,6 +486,16 @@ function onWindowResize() {
 
 // ---------- VISUALS ----------
 
+// make sure no color goes to "pure black"
+function ensureMinBrightness(color, minL = 0.35) {
+  const hsl = {};
+  color.getHSL(hsl);
+  if (hsl.l < minL) {
+    color.setHSL(hsl.h, hsl.s, minL);
+  }
+  return color;
+}
+
 function applyTerritoryVisuals(id) {
   const mesh = territoryMeshes[id];
   if (!mesh) return;
@@ -502,15 +534,16 @@ function applyTerritoryVisuals(id) {
 
   const control = state.control || 0;
   // brightness bump with control level
-  let intensity = 0.85;
+  let intensity = 0.9;
   if (control === 25) intensity = 1.0;
   if (control === 75) intensity = 1.15;
   if (control === 100) intensity = 1.3;
 
   const color = baseColor.clone().multiplyScalar(intensity);
+  ensureMinBrightness(color, 0.4);
   mesh.material.color.copy(color);
 
-  // Scale by control (slightly reduced overall so planets stay smaller)
+  // Scale by control (slightly reduced overall so planets stay readable)
   let scale = 1.0;
   if (control === 25) scale = 1.1;
   if (control === 75) scale = 1.25;
@@ -518,7 +551,7 @@ function applyTerritoryVisuals(id) {
   mesh.scale.set(scale, scale, scale);
 
   // Emissive glow for selected + safe
-  let emissive = new THREE.Color(0x000000);
+  let emissive = new THREE.Color(0x050712); // non-zero base so nothing goes dead
   if (selectedId === id) {
     emissive = emissive.add(color.clone().multiplyScalar(0.35));
   }
@@ -526,6 +559,16 @@ function applyTerritoryVisuals(id) {
     emissive = emissive.add(new THREE.Color(0x38bdf8).multiplyScalar(0.4));
   }
   mesh.material.emissive.copy(emissive);
+}
+
+// Center and zoom on a specific territory
+function focusOnTerritory(id) {
+  const mesh = territoryMeshes[id];
+  if (!mesh) return;
+
+  orbitTarget.copy(mesh.position);
+  zoomFactor = Math.min(MAX_ZOOM, 1.7); // pretty close in
+  updateCameraPosition();
 }
 
 // ---------- UI / EVENTS ----------
@@ -754,6 +797,7 @@ function onSelectTerritory(id) {
   selectedId = id;
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
   renderSelection();
+  focusOnTerritory(id); // click → zoom in & center on that world
 }
 
 function getTerritoryName(id) {
@@ -840,5 +884,11 @@ function resetState() {
   selectedId = null;
   saveState();
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
+
+  // reset camera to full-map view
+  orbitTarget.set(0, 0, 0);
+  zoomFactor = DEFAULT_ZOOM;
+  updateCameraPosition();
+
   renderAll();
 }
