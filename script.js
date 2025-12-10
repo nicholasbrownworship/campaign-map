@@ -3,27 +3,66 @@
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
 const TERRITORIES = [
-  { id: "bastior_prime",  name: "Bastior Prime",  x: 50, y: 48, z: 0  },
-  { id: "harkanis",       name: "Harkanis",       x: 30, y: 30, z: -10 },
-  { id: "karst_forge",    name: "Karst Forge",    x: 68, y: 26, z: 12 },
-  { id: "veldras_gate",   name: "Veldras Gate",   x: 75, y: 60, z: -15 },
-  { id: "trinaxis_minor", name: "Trinaxis Minor", x: 40, y: 70, z: 8  },
-  { id: "osiron_spur",    name: "Osiron Spur",    x: 18, y: 55, z: -20 },
-  { id: "kethrax_deep",   name: "Kethrax Deep",   x: 60, y: 82, z: 15 },
-  { id: "magnus_relay",   name: "Magnus Relay",   x: 15, y: 15, z: 5  }
+  // Region Alpha – "Bastior Reach" (good for Defenders)
+  { id: "magnus_relay",    name: "Magnus Relay",    x: 18, y: 72, z: 4 },
+  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 24, y: 88, z: -5 },
+  { id: "osiron_spur",     name: "Osiron Spur",     x: 30, y: 80, z: -10 },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 32, y: 62, z: 12 },
+  { id: "bastior_prime",   name: "Bastior Prime",   x: 45, y: 60, z: 0 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 40, y: 68, z: 8 },
+
+  // Region Beta – "Karst Expanse" (good for Attackers)
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 64, y: 82, z: 15 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x: 72, y: 90, z: 2 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x: 82, y: 72, z: -15 },
+  { id: "karst_forge",     name: "Karst Forge",     x: 78, y: 58, z: 12 },
+  { id: "voryn_crossing",  name: "Voryn Crossing",  x: 64, y: 60, z: 6 },
+  { id: "cinder_wake",     name: "Cinder Wake",     x: 88, y: 60, z: -8 },
+  { id: "silas_gate",      name: "Silas Gate",      x: 72, y: 52, z: -12 },
+
+  // Region Gamma – "Harkanis Fringe" (good for Raiders)
+  { id: "harkanis",        name: "Harkanis",        x: 30, y: 32, z: -10 },
+  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 44, y: 22, z: -18 },
+  { id: "emberhold",       name: "Emberhold",       x: 36, y: 16, z: 5 },
+  { id: "threnos_void",    name: "Threnos Void",    x: 22, y: 18, z: 16 },
+  { id: "helios_spine",    name: "Helios Spine",    x: 60, y: 26, z: 10 }
 ];
+
 
 // Nearest-neighbor-ish ring around the sector
 const WARP_LANES = [
-  ["magnus_relay",   "harkanis"],
-  ["harkanis",       "bastior_prime"],
-  ["bastior_prime",  "karst_forge"],
-  ["karst_forge",    "veldras_gate"],
-  ["veldras_gate",   "kethrax_deep"],
-  ["kethrax_deep",   "trinaxis_minor"],
-  ["trinaxis_minor", "osiron_spur"],
-  ["osiron_spur",    "magnus_relay"]
+  // Region Alpha web
+  ["magnus_relay",   "osiron_spur"],
+  ["magnus_relay",   "duskfall_watch"],
+  ["duskfall_watch", "kethrax_deep"],
+  ["osiron_spur",    "aurum_refuge"],
+  ["aurum_refuge",   "bastior_prime"],
+  ["bastior_prime",  "trinaxis_minor"],
+  ["trinaxis_minor", "kethrax_deep"],
+
+  // Region Beta web
+  ["kethrax_deep",   "vorun_halo"],
+  ["vorun_halo",     "veldras_gate"],
+  ["veldras_gate",   "karst_forge"],
+  ["karst_forge",    "voryn_crossing"],
+  ["voryn_crossing", "bastior_prime"],
+  ["karst_forge",    "silas_gate"],
+  ["silas_gate",     "cinder_wake"],
+  ["cinder_wake",    "vorun_halo"],
+
+  // Region Gamma web
+  ["harkanis",       "emberhold"],
+  ["harkanis",       "nadir_outpost"],
+  ["nadir_outpost",  "threnos_void"],
+  ["threnos_void",   "emberhold"],
+  ["emberhold",      "helios_spine"],
+
+  // Cross-region bridges
+  ["helios_spine",   "veldras_gate"],   // Gamma → Beta
+  ["kethrax_deep",   "trinaxis_minor"], // Alpha → Beta (already above)
+  ["voryn_crossing", "bastior_prime"]   // Alpha ↔ Beta (already above)
 ];
+
 
 
 // ---------- STATE ----------
