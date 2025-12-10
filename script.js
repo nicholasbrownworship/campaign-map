@@ -3,28 +3,28 @@
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
 const TERRITORIES = [
-  { id: "bastior_prime", name: "Bastior Prime", x: 50, y: 48, z: 0 },
-  { id: "harkanis", name: "Harkanis", x: 30, y: 30, z: -10 },
-  { id: "karst_forge", name: "Karst Forge", x: 68, y: 26, z: 12 },
-  { id: "veldras_gate", name: "Veldras Gate", x: 75, y: 60, z: -15 },
-  { id: "trinaxis_minor", name: "Trinaxis Minor", x: 40, y: 70, z: 8 },
-  { id: "osiron_spur", name: "Osiron Spur", x: 18, y: 55, z: -20 },
-  { id: "kethrax_deep", name: "Kethrax Deep", x: 60, y: 82, z: 15 },
-  { id: "magnus_relay", name: "Magnus Relay", x: 15, y: 15, z: 5 }
+  { id: "bastior_prime",  name: "Bastior Prime",  x: 50, y: 48, z: 0  },
+  { id: "harkanis",       name: "Harkanis",       x: 30, y: 30, z: -10 },
+  { id: "karst_forge",    name: "Karst Forge",    x: 68, y: 26, z: 12 },
+  { id: "veldras_gate",   name: "Veldras Gate",   x: 75, y: 60, z: -15 },
+  { id: "trinaxis_minor", name: "Trinaxis Minor", x: 40, y: 70, z: 8  },
+  { id: "osiron_spur",    name: "Osiron Spur",    x: 18, y: 55, z: -20 },
+  { id: "kethrax_deep",   name: "Kethrax Deep",   x: 60, y: 82, z: 15 },
+  { id: "magnus_relay",   name: "Magnus Relay",   x: 15, y: 15, z: 5  }
 ];
 
-// Simple warp-lane graph between worlds
+// Nearest-neighbor-ish ring around the sector
 const WARP_LANES = [
-  ["bastior_prime", "harkanis"],
-  ["harkanis", "osiron_spur"],
-  ["osiron_spur", "magnus_relay"],
-  ["magnus_relay", "kethrax_deep"],
-  ["kethrax_deep", "trinaxis_minor"],
-  ["trinaxis_minor", "veldras_gate"],
-  ["veldras_gate", "karst_forge"],
-  ["karst_forge", "bastior_prime"]
-
+  ["magnus_relay",   "harkanis"],
+  ["harkanis",       "bastior_prime"],
+  ["bastior_prime",  "karst_forge"],
+  ["karst_forge",    "veldras_gate"],
+  ["veldras_gate",   "kethrax_deep"],
+  ["kethrax_deep",   "trinaxis_minor"],
+  ["trinaxis_minor", "osiron_spur"],
+  ["osiron_spur",    "magnus_relay"]
 ];
+
 
 // ---------- STATE ----------
 
