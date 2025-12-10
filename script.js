@@ -106,7 +106,6 @@ const PLANET_BASE_COLORS = {
 };
 
 // Planet size factors (relative to base radius)
-// Big setpieces > regional hubs > wildspace rocks
 const PLANET_SIZE_FACTORS = {
   bastior_prime:  1.5,
   trinaxis_minor: 1.2,
@@ -142,7 +141,7 @@ let selectedId = null;
 // 3D
 let scene, camera, renderer;
 let territoryMeshes = {};      // id -> planet mesh
-let factionRingMeshes = {};     // id -> ring mesh
+let factionRingMeshes = {};    // id -> ring mesh
 let animationFrameId = null;
 let mapViewportEl, canvasEl;
 let raycaster, pointer;
@@ -153,14 +152,15 @@ const DEFAULT_ZOOM = 0.7;
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 2.0;
-const cameraBaseDistance = 520;
+// farther base distance so we still see most of the map with deeper Z
+const cameraBaseDistance = 600;
 
 let orbitPhi = Math.PI / 3;
 let orbitTheta = Math.PI / 6;
 let orbitTarget = new THREE.Vector3(0, 0, 0);
 
-// depth scaling
-const Z_DEPTH_FACTOR = 4;
+// depth scaling – increased so the map feels less flat
+const Z_DEPTH_FACTOR = 8;
 
 let isDragging = false;
 let lastMouseX = 0;
@@ -293,7 +293,7 @@ function init3DScene() {
   const starsGeometry = new THREE.BufferGeometry();
   const starCount = 2600;
   const positions = new Float32Array(starCount * 3);
-  const radius = 1100;
+  const radius = 1300;
 
   for (let i = 0; i < starCount; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
@@ -522,7 +522,6 @@ function onWindowResize() {
 
 // ---------- VISUALS ----------
 
-// Ensure color never gets too dark
 function ensureMinBrightness(color, minL = 0.4) {
   const hsl = {};
   color.getHSL(hsl);
@@ -546,19 +545,19 @@ function applyTerritoryVisuals(id) {
 
   const control = state.control || 0;
 
-  // Planet color = identity only (no heavy faction tint)
+  // Planet color = identity only
   const color = planetBase.clone();
   ensureMinBrightness(color, 0.4);
   mesh.material.color.copy(color);
 
-  // Scale slightly with control level
+  // Scale with control level
   let scale = 1.0;
   if (control === 25) scale = 1.1;
   if (control === 75) scale = 1.25;
   if (control === 100) scale = 1.4;
   mesh.scale.set(scale, scale, scale);
 
-  // Faction color used for the ring (labeling ownership)
+  // Faction ring color (ownership label)
   let ringColorHex = null;
   switch (state.faction) {
     case "defenders":
@@ -594,7 +593,6 @@ function applyTerritoryVisuals(id) {
   mesh.material.emissive.copy(emissive);
 }
 
-// Center and zoom on a specific territory
 function focusOnTerritory(id) {
   const mesh = territoryMeshes[id];
   if (!mesh) return;
