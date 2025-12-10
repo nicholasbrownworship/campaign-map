@@ -34,7 +34,6 @@ body {
 
 body {
   font-family: var(--font-sans);
-  /* page background, NOT the starfield */
   background: radial-gradient(circle at top, #050816 0, #020309 60%);
   color: var(--text);
 }
@@ -125,18 +124,7 @@ body {
   color: var(--text-muted);
 }
 
-/* Victory banner */
-
-.victory-banner {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 0%, rgba(34, 197, 94, 0.7), #14532d);
-  border: 1px solid rgba(74, 222, 128, 0.8);
-  font-size: 0.8rem;
-  text-align: center;
-  color: #ecfdf5;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-}
+/* Main layout */
 
 .app-main {
   flex: 1;
@@ -252,27 +240,6 @@ body {
   gap: 10px;
 }
 
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.toggle input {
-  accent-color: var(--accent-defenders);
-}
-
-.target-select {
-  font-size: 0.8rem;
-  padding: 5px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border-soft);
-  background: #020617;
-  color: var(--text);
-}
-
 /* Zoom controls */
 
 .zoom-controls {
@@ -292,188 +259,24 @@ body {
   text-align: center;
 }
 
-/* Map viewport & layers */
+/* Map viewport */
 
 .map-viewport {
   position: relative;
   flex: 1;
-  padding: 10px;
+  padding: 0;
   min-height: 320px;
   overflow: hidden;
-  cursor: grab;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-
-  /* STARFIELD ONLY IN THIS SECTION */
-  background-image: url("images/starfield.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: radial-gradient(circle at center, #020617 0, #000 100%);
 }
 
-/* Soft vignette so UI is readable but stars still visible */
-.map-viewport::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    circle at center,
-    transparent 0,
-    transparent 70%,
-    rgba(0, 0, 0, 0.4) 100%
-  );
-}
+/* Canvas fills the space */
 
-.map-viewport.grabbing {
-  cursor: grabbing;
-}
-
-/* Glass panel that the planets sit on */
-.map-grid {
-  position: relative;
+#galaxyCanvas {
   width: 100%;
   height: 100%;
-  border-radius: calc(var(--radius-lg) - 6px);
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-
-  /* VERY light tint so the starfield still shows through */
-  background: rgba(3, 7, 18, 0.25);
-  backdrop-filter: blur(2px);
-}
-
-/* Planets layer: moves & zooms. NO background pattern here. */
-.map-layer {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-origin: center center;
-  /* transparent – just nodes and labels */
-}
-
-/* Territory nodes */
-
-.territory-node {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  border: 2px solid var(--accent-unclaimed);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  background: radial-gradient(circle at 30% 20%, #111827, #020617);
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9), 0 0 16px rgba(15, 23, 42, 0.9);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast),
-    border-color var(--transition-fast), background var(--transition-fast),
-    opacity var(--transition-fast), filter var(--transition-fast);
-}
-
-.territory-node:hover {
-  transform: translate(-50%, -50%) scale(1.04);
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.8),
-    0 0 24px rgba(59, 130, 246, 0.6);
-}
-
-.territory-node.selected {
-  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.9),
-    0 0 26px rgba(129, 140, 248, 0.9);
-}
-
-.node-core {
-  width: 70%;
-  height: 70%;
-  border-radius: inherit;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-}
-
-/* Faction colors */
-
-.territory-node.faction-defenders {
-  border-color: var(--accent-defenders);
-}
-
-.territory-node.faction-attackers {
-  border-color: var(--accent-attackers);
-}
-
-.territory-node.faction-raiders {
-  border-color: var(--accent-raiders);
-}
-
-.territory-node.faction-unclaimed {
-  border-color: var(--accent-unclaimed);
-}
-
-/* Control intensities */
-
-.territory-node.control-0 .node-core {
-  background: radial-gradient(circle at 50% 30%, #020617, #020617);
-  opacity: 0.6;
-}
-
-.territory-node.control-25 .node-core {
-  background: radial-gradient(circle at 50% 30%, rgba(148, 163, 184, 0.4), #020617);
-}
-
-.territory-node.control-75 .node-core {
-  background: radial-gradient(circle at 50% 30%, rgba(148, 163, 184, 0.7), #020617);
-}
-
-.territory-node.control-100 .node-core {
-  background: radial-gradient(circle at 50% 30%, #f9fafb, #111827);
-}
-
-/* Safe and locking */
-
-.territory-node.safe {
-  box-shadow:
-    0 0 0 1px rgba(56, 189, 248, 0.8),
-    0 0 26px rgba(56, 189, 248, 0.9);
-}
-
-.territory-node.locked-turn::after {
-  content: "⏳";
-  position: absolute;
-  top: -10px;
-  right: -8px;
-  font-size: 0.68rem;
-  opacity: 0.9;
-}
-
-/* Target highlighting */
-
-.territory-node.target-legal {
-  filter: none;
-  opacity: 1;
-}
-
-.territory-node.target-illegal {
-  filter: grayscale(0.8);
-  opacity: 0.4;
-}
-
-/* Labels */
-
-.territory-label {
-  position: absolute;
-  top: 54px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: linear-gradient(
-    to bottom,
-    rgba(15, 23, 42, 0.92),
-    rgba(15, 23, 42, 0.97)
-  );
-  border: 1px solid rgba(31, 41, 55, 0.9);
+  display: block;
 }
 
 /* Sidebar */
@@ -505,6 +308,8 @@ body {
   text-transform: uppercase;
   color: var(--text-muted);
 }
+
+/* Selection panel */
 
 .selection-panel h3 {
   margin: 0;
@@ -549,14 +354,20 @@ input[type="text"] {
   margin-top: 4px;
 }
 
+input[type="checkbox"] {
+  accent-color: var(--accent-defenders);
+}
+
 .control-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .control-display {
   flex: 1;
+  min-width: 120px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -571,77 +382,10 @@ input[type="text"] {
   font-weight: 600;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-}
-
-.pill-neutral {
-  background: var(--pill-neutral);
-  color: var(--text);
-}
-
-.pill-high {
-  background: rgba(16, 185, 129, 0.25);
-  color: #6ee7b7;
-}
-
-.pill-critical {
-  background: rgba(248, 113, 113, 0.2);
-  color: #fecaca;
-}
-
-/* Control effects */
-
-.effect-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  padding: 3px 6px;
-  border-radius: 999px;
-  margin-bottom: 4px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(31, 41, 55, 0.9);
-}
-
-.effect-line.active {
-  border-color: rgba(34, 197, 94, 0.9);
-  box-shadow: 0 0 12px rgba(22, 163, 74, 0.8);
-}
-
-.effect-tag {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-
-.effect-text {
-  color: #e5e7eb;
-}
-
-/* Helper text */
-
 .help-text {
   font-size: 0.7rem;
   color: var(--text-muted);
   margin: 4px 0 0;
-}
-
-/* Empty state */
-
-.empty-state {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px dashed rgba(55, 65, 81, 0.9);
-  font-size: 0.8rem;
-  color: var(--text-muted);
 }
 
 /* Battle section */
@@ -663,10 +407,12 @@ input[type="text"] {
 .battle-row {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .battle-column {
   flex: 1;
+  min-width: 120px;
 }
 
 .battle-label {
@@ -757,11 +503,6 @@ input[type="text"] {
   background: linear-gradient(to right, #22c55e, #a3e635);
 }
 
-.faction-buffs {
-  margin-top: 6px;
-  color: var(--text-muted);
-}
-
 /* Log */
 
 .log-section {
@@ -801,6 +542,17 @@ input[type="text"] {
 .log-item span.dot {
   margin: 0 2px;
   color: #4b5563;
+}
+
+/* Empty state */
+
+.empty-state {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px dashed rgba(55, 65, 81, 0.9);
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 /* Utilities */
