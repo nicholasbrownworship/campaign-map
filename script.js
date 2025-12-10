@@ -1,4 +1,4 @@
-// ------- CONFIG / DATA -------
+// ---------- CONFIG / DATA ----------
 
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
@@ -13,23 +13,30 @@ const TERRITORIES = [
   { id: "magnus_relay", name: "Magnus Relay", x: 15, y: 15, z: 5 }
 ];
 
-// ------- STATE -------
+// ---------- STATE ----------
 
 let turnNumber = 1;
 let mapState = {}; // id -> { faction, control, safe, lockedUntilTurn }
 let logEntries = [];
 let selectedId = null;
 
-// 3D scene globals
-let scene, camera, renderer, controls, raycaster, pointer;
+// 3D
+let scene, camera, renderer;
 let territoryMeshes = {}; // id -> THREE.Mesh
 let animationFrameId = null;
-let cameraBaseDistance = 200;
-let zoomFactor = 1;
-
-// ------- DOM ELEMENTS -------
-
 let mapViewportEl, canvasEl;
+let raycaster, pointer;
+
+// simple manual orbit
+let zoomFactor = 1;
+const cameraBaseDistance = 200;
+let orbitPhi = Math.PI / 4;    // vertical angle
+let orbitTheta = Math.PI / 6;  // horizontal angle
+let isDragging = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+// UI elements
 let turnLabelEl, zoomLabelEl;
 let noSelectionEl, selectionEl;
 let territoryNameEl, territoryMetaEl;
@@ -38,7 +45,7 @@ let safeToggleEl;
 let defenderFactionSelectEl, attackerFactionSelectEl;
 let logListEl;
 
-// ------- INIT -------
+// ---------- INIT ----------
 
 document.addEventListener("DOMContentLoaded", () => {
   cacheDom();
@@ -65,17 +72,13 @@ function cacheDom() {
   controlPercentEl = document.getElementById("controlPercent");
   safeToggleEl = document.getElementById("safeToggle");
 
-  defenderFactionSelectEl = document.getElementById(
-    "defenderFactionSelect"
-  );
-  attackerFactionSelectEl = document.getElementById(
-    "attackerFactionSelect"
-  );
+  defenderFactionSelectEl = document.getElementById("defenderFactionSelect");
+  attackerFactionSelectEl = document.getElementById("attackerFactionSelect");
 
   logListEl = document.getElementById("logList");
 }
 
-// ------- STATE LOAD / SAVE -------
+// ---------- STATE LOAD/SAVE ----------
 
 function getDefaultState() {
   const state = {};
@@ -109,8 +112,8 @@ function loadState() {
     turnNumber = data.turnNumber ?? 1;
     mapState = data.mapState ?? getDefaultState().mapState;
     logEntries = data.logEntries ?? [];
-  } catch (err) {
-    console.error("Failed to load state", err);
+  } catch (e) {
+    console.error("Failed to load state", e);
     const def = getDefaultState();
     turnNumber = def.turnNumber;
     mapState = def.mapState;
@@ -127,20 +130,18 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
-// ------- 3D SCENE SETUP -------
+// ---------- 3D SETUP ----------
 
 function init3DScene() {
-  // Scene
+  const width = mapViewportEl.clientWidth || 400;
+  const height = mapViewportEl.clientHeight || 300;
+
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x020617);
 
-  // Camera
-  const width = mapViewportEl.clientWidth;
-  const height = mapViewportEl.clientHeight;
   camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000);
-  camera.position.set(0, 0, cameraBaseDistance);
+  updateCameraPosition();
 
-  // Renderer
   renderer = new THREE.WebGLRenderer({
     canvas: canvasEl,
     antialias: true
@@ -148,19 +149,9 @@ function init3DScene() {
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
 
-  // Controls
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-  controls.rotateSpeed = 0.6;
-  controls.zoomSpeed = 0.8;
-  controls.minDistance = 80;
-  controls.maxDistance = 400;
-
   // Lights
   const ambient = new THREE.AmbientLight(0xffffff, 0.7);
   scene.add(ambient);
-
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
   dirLight.position.set(50, 100, 80);
   scene.add(dirLight);
@@ -174,16 +165,12 @@ function init3DScene() {
   for (let i = 0; i < starCount; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
     const theta = 2 * Math.PI * Math.random();
-    const r = radius;
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
+    positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = radius * Math.cos(phi);
   }
 
-  starsGeometry.setAttribute(
-    "position",
-    new THREE.BufferAttribute(positions, 3)
-  );
+  starsGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
 
   const starsMaterial = new THREE.PointsMaterial({
     color: 0x9ca3af,
@@ -196,7 +183,6 @@ function init3DScene() {
 
   // Territory spheres
   const baseRadius = 4;
-
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * 2.5;
     const y = (t.y - 50) * -2.5;
@@ -219,38 +205,98 @@ function init3DScene() {
     applyTerritoryVisuals(t.id);
   });
 
-  // Picking
+  // Raycaster
   raycaster = new THREE.Raycaster();
   pointer = new THREE.Vector2();
-  canvasEl.addEventListener("pointerdown", onPointerDown);
 
-  // Resize
+  // Mouse events for orbit + picking
+  canvasEl.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  canvasEl.addEventListener("wheel", onWheel, { passive: false });
+
   window.addEventListener("resize", onWindowResize);
 
-  // Start loop
   animate();
 }
 
 function animate() {
   animationFrameId = requestAnimationFrame(animate);
-  controls.update();
   renderer.render(scene, camera);
 }
 
-function onWindowResize() {
-  const width = mapViewportEl.clientWidth;
-  const height = mapViewportEl.clientHeight || 1;
-  camera.aspect = width / height;
+// ---------- CAMERA ORBIT ----------
+
+function updateCameraPosition() {
+  const r = cameraBaseDistance * zoomFactor;
+  const x = r * Math.sin(orbitPhi) * Math.cos(orbitTheta);
+  const y = r * Math.cos(orbitPhi);
+  const z = r * Math.sin(orbitPhi) * Math.sin(orbitTheta);
+
+  camera.position.set(x, y, z);
+  camera.lookAt(0, 0, 0);
   camera.updateProjectionMatrix();
-  renderer.setSize(width, height);
+
+  if (zoomLabelEl) {
+    zoomLabelEl.textContent = `${Math.round(zoomFactor * 100)}%`;
+  }
 }
 
-// ------- 3D INTERACTION -------
+function onWheel(e) {
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? -0.1 : 0.1;
+  zoomFactor = Math.min(2, Math.max(0.5, zoomFactor + delta));
+  updateCameraPosition();
+}
 
-function onPointerDown(event) {
+function onPointerDown(e) {
   const rect = canvasEl.getBoundingClientRect();
-  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  const inside =
+    e.clientX >= rect.left &&
+    e.clientX <= rect.right &&
+    e.clientY >= rect.top &&
+    e.clientY <= rect.bottom;
+
+  if (!inside) return;
+
+  if (e.button === 0) {
+    // left-click: pick OR start drag
+    // we distinguish click vs drag by comparing movement in pointerup
+    isDragging = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+
+    // also do a pick immediately for "click world"
+    handlePick(e.clientX, e.clientY, rect);
+  }
+}
+
+function onPointerMove(e) {
+  if (!isDragging) return;
+
+  const dx = e.clientX - lastMouseX;
+  const dy = e.clientY - lastMouseY;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+
+  const ROT_SPEED = 0.005;
+  orbitTheta -= dx * ROT_SPEED;
+  orbitPhi -= dy * ROT_SPEED;
+
+  // clamp vertical angle
+  const EPS = 0.1;
+  orbitPhi = Math.max(EPS, Math.min(Math.PI - EPS, orbitPhi));
+
+  updateCameraPosition();
+}
+
+function onPointerUp() {
+  isDragging = false;
+}
+
+function handlePick(clientX, clientY, rect) {
+  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
   raycaster.setFromCamera(pointer, camera);
   const intersects = raycaster.intersectObjects(
@@ -261,13 +307,20 @@ function onPointerDown(event) {
   if (intersects.length > 0) {
     const mesh = intersects[0].object;
     const id = mesh.userData.id;
-    if (id) {
-      onSelectTerritory(id);
-    }
+    if (id) onSelectTerritory(id);
   }
 }
 
-// ------- VISUALS -------
+function onWindowResize() {
+  const width = mapViewportEl.clientWidth || 400;
+  const height = mapViewportEl.clientHeight || 300;
+
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+}
+
+// ---------- VISUALS ----------
 
 function applyTerritoryVisuals(id) {
   const mesh = territoryMeshes[id];
@@ -292,7 +345,6 @@ function applyTerritoryVisuals(id) {
   }
 
   const control = state.control || 0;
-
   let intensity = 0.7;
   if (control === 25) intensity = 0.9;
   if (control === 75) intensity = 1.1;
@@ -319,19 +371,27 @@ function applyTerritoryVisuals(id) {
   mesh.material.emissive = emissive;
 }
 
-// ------- UI / EVENTS -------
+// ---------- UI / EVENTS ----------
 
 function hookEvents() {
   document
     .getElementById("zoomInBtn")
-    .addEventListener("click", () => adjustZoom(0.15));
+    .addEventListener("click", () => {
+      zoomFactor = Math.min(2, zoomFactor + 0.15);
+      updateCameraPosition();
+    });
+
   document
     .getElementById("zoomOutBtn")
-    .addEventListener("click", () => adjustZoom(-0.15));
+    .addEventListener("click", () => {
+      zoomFactor = Math.max(0.5, zoomFactor - 0.15);
+      updateCameraPosition();
+    });
 
   document
     .getElementById("advanceTurnBtn")
     .addEventListener("click", advanceTurn);
+
   document
     .getElementById("resetStateBtn")
     .addEventListener("click", resetState);
@@ -370,7 +430,6 @@ function hookEvents() {
     renderLog();
   });
 
-  // Control buttons
   document
     .querySelectorAll(".control-row .btn[data-control]")
     .forEach((btn) => {
@@ -409,17 +468,7 @@ function hookEvents() {
     });
 }
 
-function adjustZoom(delta) {
-  zoomFactor = Math.min(2, Math.max(0.5, zoomFactor + delta));
-  zoomLabelEl.textContent = `${Math.round(zoomFactor * 100)}%`;
-
-  const dir = camera.position.clone().normalize();
-  const distance = cameraBaseDistance * zoomFactor;
-  camera.position.copy(dir.multiplyScalar(distance));
-  camera.updateProjectionMatrix();
-}
-
-// ------- RENDERING -------
+// ---------- RENDERING ----------
 
 function renderAll() {
   renderTurn();
@@ -430,6 +479,7 @@ function renderAll() {
 
 function renderTurn() {
   turnLabelEl.textContent = String(turnNumber);
+  updateCameraPosition();
 }
 
 function renderSelection() {
@@ -475,21 +525,18 @@ function updateFactionOverview() {
   });
   if (totalInfluence === 0) totalInfluence = 1;
 
-  // Defenders
   updateFactionCard(
     "defenders",
     totals.defenders.worlds,
     totals.defenders.influence,
     totalInfluence
   );
-  // Attackers
   updateFactionCard(
     "attackers",
     totals.attackers.worlds,
     totals.attackers.influence,
     totalInfluence
   );
-  // Raiders
   updateFactionCard(
     "raiders",
     totals.raiders.worlds,
@@ -497,7 +544,6 @@ function updateFactionOverview() {
     totalInfluence
   );
 
-  // Unclaimed
   const unclaimedSummary = document.getElementById("unclaimedSummary");
   unclaimedSummary.textContent = `${totals.unclaimed.worlds} worlds unclaimed`;
 }
@@ -515,22 +561,25 @@ function updateFactionCard(faction, worlds, influence, totalInfluence) {
 
 function renderLog() {
   logListEl.innerHTML = "";
-  logEntries.slice().reverse().forEach((entry) => {
-    const li = document.createElement("li");
-    li.className = "log-item";
-    const time = document.createElement("span");
-    time.className = "time";
-    time.textContent = `[T${entry.turn}]`;
-    const dot = document.createElement("span");
-    dot.className = "dot";
-    dot.textContent = "•";
-    const msg = document.createElement("span");
-    msg.textContent = entry.text;
-    li.appendChild(time);
-    li.appendChild(dot);
-    li.appendChild(msg);
-    logListEl.appendChild(li);
-  });
+  logEntries
+    .slice()
+    .reverse()
+    .forEach((entry) => {
+      const li = document.createElement("li");
+      li.className = "log-item";
+      const time = document.createElement("span");
+      time.className = "time";
+      time.textContent = `[T${entry.turn}]`;
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.textContent = "•";
+      const msg = document.createElement("span");
+      msg.textContent = entry.text;
+      li.appendChild(time);
+      li.appendChild(dot);
+      li.appendChild(msg);
+      logListEl.appendChild(li);
+    });
 }
 
 function log(text) {
@@ -542,7 +591,7 @@ function log(text) {
   saveState();
 }
 
-// ------- CAMPAIGN LOGIC -------
+// ---------- LOGIC ----------
 
 function onSelectTerritory(id) {
   selectedId = id;
@@ -555,43 +604,30 @@ function getTerritoryName(id) {
   return t ? t.name : id;
 }
 
-// Very simplified 0–25–75–100 resolver
 function resolveBattle(territoryId, defenderFaction, attackerFaction, winner) {
   const state = mapState[territoryId];
   const worldName = getTerritoryName(territoryId);
 
   const currentOwner = state.faction;
   const control = state.control;
+  const winningFaction = winner === "defender" ? defenderFaction : attackerFaction;
 
-  let winningFaction =
-    winner === "defender" ? defenderFaction : attackerFaction;
-
-  // If winner was not one of the factions, bail
-  if (!["defenders", "attackers", "raiders"].includes(winningFaction)) {
-    return;
-  }
+  if (!["defenders", "attackers", "raiders"].includes(winningFaction)) return;
 
   if (currentOwner === winningFaction) {
-    // Already owns it: step up control
     if (control === 0) state.control = 25;
     else if (control === 25) state.control = 75;
     else if (control === 75) state.control = 100;
-    // 100 stays 100
   } else {
-    // Different owner: either gain a foothold or flip hard
     if (control <= 25 || currentOwner === "unclaimed") {
-      // Early control: steal the world and bump to 75
       state.faction = winningFaction;
       state.control = 75;
     } else {
-      // Well-held world: flip but at 25% (costly win)
       state.faction = winningFaction;
       state.control = 25;
     }
   }
 
-  // Safe worlds: if defender wins on their own world at 100%,
-  // they become safe next turn.
   if (
     winner === "defender" &&
     state.faction === defenderFaction &&
@@ -620,7 +656,6 @@ function resolveBattle(territoryId, defenderFaction, attackerFaction, winner) {
 function advanceTurn() {
   turnNumber += 1;
 
-  // Unlock safe worlds whose lock has expired
   TERRITORIES.forEach((t) => {
     const state = mapState[t.id];
     if (state.safe && state.lockedUntilTurn <= turnNumber) {
