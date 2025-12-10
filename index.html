@@ -2,35 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Bastior Crusade Map</title>
+  <title>Bastior Crusade – Galaxy War Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content="Warhammer 40k Crusade galaxy map for the Bastior Sub-Sector."
+  />
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- Three.js + OrbitControls (must load before script.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
   <script src="script.js" defer></script>
 </head>
 <body>
   <div class="app-shell">
+    <!-- HEADER -->
     <header class="app-header">
       <div class="brand">
-        <div class="brand-mark">BC</div>
+        <div class="brand-mark">BW</div>
         <div class="brand-text">
-          <h1>Bastior Crusade Map</h1>
-          <p>Territory control tracker • 0–25–75–100</p>
+          <h1>Bastior War Council</h1>
+          <p>Crusade Sector Command Console</p>
         </div>
       </div>
 
       <div class="header-center">
-        <div id="victoryBanner" class="victory-banner hidden"></div>
+        <div class="turn-box">
+          <span class="turn-label">Campaign Turn</span>
+          <strong id="turnLabel">1</strong>
+        </div>
       </div>
 
       <div class="header-actions">
-        <div class="turn-box">
-          <span id="turnLabel" class="turn-label">Turn 1</span>
-          <button id="nextTurnBtn" class="btn btn-ghost btn-small">Next Turn</button>
-        </div>
-        <button id="resetMapBtn" class="btn btn-ghost">Reset Map</button>
+        <button class="btn btn-small" id="advanceTurnBtn">Advance Turn</button>
+        <button class="btn btn-small btn-ghost" id="resetStateBtn">
+          Reset Map
+        </button>
       </div>
     </header>
 
+    <!-- MAIN -->
     <main class="app-main">
       <!-- MAP PANEL -->
       <section class="map-panel">
@@ -51,167 +63,191 @@
           </div>
 
           <div class="map-toolbar-right">
-            <label class="toggle">
-              <input type="checkbox" id="showNamesToggle" checked />
-              <span>Show labels</span>
-            </label>
-
-            <select id="targetFactionSelect" class="target-select">
-              <option value="">Targets: show all</option>
-              <option value="defenders">Targets for Defenders</option>
-              <option value="attackers">Targets for Attackers</option>
-              <option value="raiders">Targets for Raiders</option>
-            </select>
-
             <div class="zoom-controls">
-              <button id="zoomOutBtn" class="btn btn-ghost btn-small">−</button>
-              <span id="zoomLabel" class="zoom-label">100%</span>
-              <button id="zoomInBtn" class="btn btn-ghost btn-small">+</button>
-              <button id="resetViewBtn" class="btn btn-ghost btn-small">Reset</button>
+              <button class="btn btn-small" id="zoomOutBtn">−</button>
+              <span class="zoom-label" id="zoomLabel">100%</span>
+              <button class="btn btn-small" id="zoomInBtn">+</button>
             </div>
           </div>
         </div>
 
         <div class="map-viewport" id="mapViewport">
-          <!-- Galaxy background is on this viewport, planets layer is transparent on top -->
-          <div id="mapGrid" class="map-grid">
-            <div id="map" class="map-layer">
-              <!-- Nodes injected by script.js -->
-            </div>
-          </div>
+          <canvas id="galaxyCanvas"></canvas>
         </div>
       </section>
 
-      <!-- SIDEBAR PANEL -->
+      <!-- SIDEBAR -->
       <aside class="sidebar">
-        <!-- Territory Inspector -->
-        <div class="sidebar-section">
-          <h2>Territory Inspector</h2>
-          <div id="noSelection" class="empty-state">
-            <p>Select a territory on the map to edit its control and resolve battles.</p>
+        <!-- Territory inspector -->
+        <section class="sidebar-section selection-panel">
+          <h2>Territory</h2>
+
+          <div id="noSelectionState" class="empty-state">
+            Click a world in the map to inspect and run battles for it.
           </div>
 
-          <div id="selectionPanel" class="selection-panel hidden">
-            <h3 id="territoryName"></h3>
-            <p class="territory-meta">
-              Region: <span id="territoryRegion"></span>
-              · Strategic value: <span id="territoryValue"></span>
-            </p>
+          <div id="selectionState" class="selection-body hidden">
+            <h3 id="territoryName">World Name</h3>
+            <div class="territory-meta" id="territoryMeta">
+              Bastior Sub-Sector &middot; Node
+            </div>
 
             <div class="field-group">
-              <label for="factionSelect">Current controlling faction</label>
+              <label for="factionSelect">Controlling Faction</label>
               <select id="factionSelect">
-                <option value="unclaimed">Unclaimed</option>
                 <option value="defenders">Defenders</option>
                 <option value="attackers">Attackers</option>
                 <option value="raiders">Raiders</option>
+                <option value="unclaimed">Unclaimed</option>
               </select>
             </div>
 
             <div class="field-group">
-              <label>Control level</label>
+              <label>Control Level</label>
               <div class="control-row">
-                <button id="decreaseControlBtn" class="btn btn-ghost">-</button>
                 <div class="control-display">
+                  <span>Control</span>
                   <span id="controlPercent">0%</span>
-                  <span id="controlLabel" class="pill pill-neutral">Contested</span>
                 </div>
-                <button id="increaseControlBtn" class="btn btn-ghost">+</button>
+                <button class="btn btn-small" data-control="0">0</button>
+                <button class="btn btn-small" data-control="25">25</button>
+                <button class="btn btn-small" data-control="75">75</button>
+                <button class="btn btn-small" data-control="100">100</button>
               </div>
-              <button id="cycleControlBtn" class="btn btn-small">Cycle 0 → 25 → 75 → 100</button>
+              <p class="help-text">
+                0 &rarr; 25 &rarr; 75 &rarr; 100 represent foothold, partial
+                control, strong hold, and total dominance.
+              </p>
             </div>
 
             <div class="field-group">
-              <label>Control effects</label>
-              <div id="effect75" class="effect-line">
-                <span class="effect-tag">75%</span>
-                <span class="effect-text"></span>
-              </div>
-              <div id="effect100" class="effect-line">
-                <span class="effect-tag">100%</span>
-                <span class="effect-text"></span>
-              </div>
-            </div>
-
-            <div class="field-group">
-              <label class="toggle">
+              <label>
                 <input type="checkbox" id="safeToggle" />
-                <span>Mark as “Safe” (locked from attack)</span>
+                Mark as "Safe" after decisive defense
               </label>
               <p class="help-text">
-                “Safe” worlds are fully secured and cannot be chosen as targets until manually unlocked.
+                Safe worlds cannot be targeted for one campaign turn.
               </p>
             </div>
 
-            <div class="field-group">
-              <label class="toggle">
-                <input type="checkbox" id="lockedThisTurnToggle" />
-                <span>Lock for this turn (already fought here)</span>
-              </label>
-              <p class="help-text">
-                This is automatically cleared when you advance the campaign turn.
-              </p>
-            </div>
-
-            <!-- Battle Resolver -->
             <div class="battle-section">
-              <h4>Battle Result Helper</h4>
-              <div class="field-group">
-                <label>Battle factions</label>
-                <div class="battle-row">
-                  <div class="battle-column">
-                    <span class="battle-label">Attacker</span>
-                    <select id="battleAttackerSelect">
-                      <option value="">—</option>
-                      <option value="defenders">Defenders</option>
-                      <option value="attackers">Attackers</option>
-                      <option value="raiders">Raiders</option>
-                    </select>
-                  </div>
-                  <div class="battle-column">
-                    <span class="battle-label">Defender</span>
-                    <select id="battleDefenderSelect">
-                      <option value="">—</option>
-                      <option value="defenders">Defenders</option>
-                      <option value="attackers">Attackers</option>
-                      <option value="raiders">Raiders</option>
-                    </select>
-                  </div>
+              <h4>Resolve Battle</h4>
+
+              <div class="battle-row">
+                <div class="battle-column">
+                  <span class="battle-label">Defender Faction</span>
+                  <select id="defenderFactionSelect">
+                    <option value="defenders">Defenders</option>
+                    <option value="attackers">Attackers</option>
+                    <option value="raiders">Raiders</option>
+                  </select>
+                </div>
+                <div class="battle-column">
+                  <span class="battle-label">Attacker Faction</span>
+                  <select id="attackerFactionSelect">
+                    <option value="attackers">Attackers</option>
+                    <option value="defenders">Defenders</option>
+                    <option value="raiders">Raiders</option>
+                  </select>
                 </div>
               </div>
 
-              <div class="field-group">
-                <label>Battle details (optional)</label>
-                <input id="battleNameInput" type="text" placeholder="Mission / notes (e.g. Incursion – Tide of Conviction)" />
-                <input id="battlePointsInput" type="text" placeholder="Points (e.g. 1500)" />
-              </div>
-
-              <div class="field-group battle-buttons">
-                <button id="attackerWinBtn" class="btn btn-small">Attacker Won</button>
-                <button id="defenderWinBtn" class="btn btn-small">Defender Won</button>
+              <div class="battle-buttons">
+                <button class="btn btn-small" id="defenderWinBtn">
+                  Defender Win
+                </button>
+                <button class="btn btn-small" id="attackerWinBtn">
+                  Attacker Win
+                </button>
               </div>
 
               <p class="help-text">
-                Applying a result advances control according to your campaign rules and writes a log entry for the battle.
+                Wins shift control toward the victor. If the opposing faction
+                held the world, a decisive victory can flip it.
               </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Faction Overview -->
-        <div class="sidebar-section">
-          <h2>Faction Overview</h2>
-          <div id="factionOverview" class="faction-overview"></div>
-        </div>
+        <!-- Factions overview -->
+        <section class="sidebar-section">
+          <h2>Sector Balance</h2>
+          <div class="faction-overview">
+            <div class="faction-card" data-faction-summary="defenders">
+              <div class="faction-card-header">
+                <div class="faction-name">
+                  <span class="faction-dot defenders"></span>
+                  <span>Defenders</span>
+                </div>
+                <span class="faction-score" id="defendersSummary">
+                  0 worlds · 0% influence
+                </span>
+              </div>
+              <div class="faction-progress-bar">
+                <div
+                  class="faction-progress-fill"
+                  id="defendersProgress"
+                ></div>
+              </div>
+            </div>
 
-        <!-- Campaign Log -->
-        <div class="sidebar-section log-section">
+            <div class="faction-card" data-faction-summary="attackers">
+              <div class="faction-card-header">
+                <div class="faction-name">
+                  <span class="faction-dot attackers"></span>
+                  <span>Attackers</span>
+                </div>
+                <span class="faction-score" id="attackersSummary">
+                  0 worlds · 0% influence
+                </span>
+              </div>
+              <div class="faction-progress-bar">
+                <div
+                  class="faction-progress-fill"
+                  id="attackersProgress"
+                ></div>
+              </div>
+            </div>
+
+            <div class="faction-card" data-faction-summary="raiders">
+              <div class="faction-card-header">
+                <div class="faction-name">
+                  <span class="faction-dot raiders"></span>
+                  <span>Raiders</span>
+                </div>
+                <span class="faction-score" id="raidersSummary">
+                  0 worlds · 0% influence
+                </span>
+              </div>
+              <div class="faction-progress-bar">
+                <div
+                  class="faction-progress-fill"
+                  id="raidersProgress"
+                ></div>
+              </div>
+            </div>
+
+            <div class="faction-card" data-faction-summary="unclaimed">
+              <div class="faction-card-header">
+                <div class="faction-name">
+                  <span class="faction-dot unclaimed"></span>
+                  <span>Unclaimed</span>
+                </div>
+                <span class="faction-score" id="unclaimedSummary">
+                  0 worlds
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Log -->
+        <section class="sidebar-section log-section">
           <h2>Campaign Log</h2>
-          <div id="logContainer" class="log-container">
+          <div class="log-container">
             <ul id="logList"></ul>
           </div>
-          <button id="clearLogBtn" class="btn btn-ghost btn-small">Clear Log</button>
-        </div>
+        </section>
       </aside>
     </main>
   </div>
