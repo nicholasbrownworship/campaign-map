@@ -80,7 +80,7 @@ const WARP_LANES = [
   ["cinder_wake",    "silas_gate"]
 ];
 
-// Base “planet personality” colors (nothing pure black)
+// Base planet colors (no pure black)
 const PLANET_BASE_COLORS = {
   bastior_prime:  0xf5d87a,
   trinaxis_minor: 0x7ac0f5,
@@ -121,21 +121,22 @@ let mapViewportEl, canvasEl;
 let raycaster, pointer;
 let warpLaneGroup;
 
-// manual orbit / zoom
-const DEFAULT_ZOOM = 0.75;
-let zoomFactor = DEFAULT_ZOOM; // start fairly zoomed OUT
-const MIN_ZOOM = 0.5;
+// camera / orbit
+const DEFAULT_ZOOM = 0.7; // fairly zoomed out by default
+let zoomFactor = DEFAULT_ZOOM;
+const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 2.0;
-const cameraBaseDistance = 460; // farther camera → whole map fits easier
+const cameraBaseDistance = 520; // higher = farther away => more map visible
+
 let orbitPhi = Math.PI / 3; // vertical angle
 let orbitTheta = Math.PI / 6; // horizontal angle
-let orbitTarget = new THREE.Vector3(0, 0, 0); // what the camera orbits/looks at
+let orbitTarget = new THREE.Vector3(0, 0, 0);
 
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
-// how much Z depth matters visually
+// depth scaling
 const Z_DEPTH_FACTOR = 4;
 
 // UI elements
@@ -146,6 +147,7 @@ let factionSelectEl, controlPercentEl;
 let safeToggleEl;
 let defenderFactionSelectEl, attackerFactionSelectEl;
 let logListEl;
+
 
 // ---------- INIT ----------
 
@@ -179,6 +181,7 @@ function cacheDom() {
 
   logListEl = document.getElementById("logList");
 }
+
 
 // ---------- STATE LOAD/SAVE ----------
 
@@ -232,6 +235,7 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
+
 // ---------- 3D SETUP ----------
 
 function init3DScene() {
@@ -239,14 +243,15 @@ function init3DScene() {
   const height = mapViewportEl.clientHeight || 300;
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x020617);
+  // no explicit background; let CSS show through
 
   camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 3000);
   updateCameraPosition();
 
   renderer = new THREE.WebGLRenderer({
     canvas: canvasEl,
-    antialias: true
+    antialias: true,
+    alpha: true // transparent background so CSS starmap is visible
   });
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -258,7 +263,7 @@ function init3DScene() {
   dirLight.position.set(80, 120, 100);
   scene.add(dirLight);
 
-  // Starfield backdrop
+  // Starfield (3D points around everything)
   const starsGeometry = new THREE.BufferGeometry();
   const starCount = 2600;
   const positions = new Float32Array(starCount * 3);
@@ -279,7 +284,7 @@ function init3DScene() {
 
   const starsMaterial = new THREE.PointsMaterial({
     color: 0xffffff,
-    size: 1.8,
+    size: 1.7,
     sizeAttenuation: true,
     opacity: 0.85,
     transparent: true
@@ -288,23 +293,9 @@ function init3DScene() {
   const starField = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starField);
 
-  // Starmap "disc" under the nodes (wireframe circle grid)
-  const gridRadius = 260;
-  const gridGeom = new THREE.CircleGeometry(gridRadius, 64);
-  const gridMat = new THREE.MeshBasicMaterial({
-    color: 0x111827,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.5
-  });
-  const grid = new THREE.Mesh(gridGeom, gridMat);
-  grid.rotation.x = -Math.PI / 2; // lie flat in XZ plane
-  grid.position.y = -10; // just beneath the nodes
-  scene.add(grid);
-
-  // Territory spheres (smaller + more depth)
+  // Territory spheres
   const baseRadius = 6;
-  const spread = 3.8; // slightly tighter than before
+  const spread = 3.8; // how far apart points are in world units
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
     const y = (t.y - 50) * -spread;
@@ -315,7 +306,7 @@ function init3DScene() {
       color: 0x9ca3af,
       shininess: 40,
       specular: 0x555555,
-      emissive: 0x050712 // tiny base emissive so nothing goes to pure black
+      emissive: 0x050712 // small emissive so nothing is ever fully black
     });
 
     const mesh = new THREE.Mesh(geom, mat);
@@ -375,7 +366,6 @@ function buildWarpLanes() {
 function animate() {
   animationFrameId = requestAnimationFrame(animate);
 
-  // slow spin on planets to feel alive
   Object.values(territoryMeshes).forEach((mesh) => {
     mesh.rotation.y += 0.003;
   });
@@ -383,10 +373,11 @@ function animate() {
   renderer.render(scene, camera);
 }
 
+
 // ---------- CAMERA ORBIT / ZOOM ----------
 
 function updateCameraPosition() {
-  const r = cameraBaseDistance / zoomFactor; // zoomFactor up => closer
+  const r = cameraBaseDistance / zoomFactor;
 
   const dirX = Math.sin(orbitPhi) * Math.cos(orbitTheta);
   const dirY = Math.cos(orbitPhi);
@@ -407,7 +398,6 @@ function updateCameraPosition() {
 
 function onWheel(e) {
   e.preventDefault();
-  // scroll up (negative deltaY) => zoom in
   if (e.deltaY < 0) {
     zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.1);
   } else {
@@ -431,7 +421,6 @@ function onPointerDown(e) {
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
 
-    // Also do pick on click
     handlePick(e.clientX, e.clientY, rect);
   }
 }
@@ -484,10 +473,11 @@ function onWindowResize() {
   renderer.setSize(width, height);
 }
 
+
 // ---------- VISUALS ----------
 
-// make sure no color goes to "pure black"
-function ensureMinBrightness(color, minL = 0.35) {
+// Ensure color never gets too dark to see
+function ensureMinBrightness(color, minL = 0.4) {
   const hsl = {};
   color.getHSL(hsl);
   if (hsl.l < minL) {
@@ -502,38 +492,33 @@ function applyTerritoryVisuals(id) {
   const state = mapState[id];
   if (!state) return;
 
-  // Planet base color (for planet personality)
   const planetBase = new THREE.Color(
     PLANET_BASE_COLORS[id] !== undefined ? PLANET_BASE_COLORS[id] : 0x9ca3af
   );
 
-  // Faction tint
   let factionColor;
   switch (state.faction) {
     case "defenders":
-      factionColor = new THREE.Color(0x4ade80); // green
+      factionColor = new THREE.Color(0x4ade80);
       break;
     case "attackers":
-      factionColor = new THREE.Color(0xfb7185); // red
+      factionColor = new THREE.Color(0xfb7185);
       break;
     case "raiders":
-      factionColor = new THREE.Color(0xa855f7); // purple
+      factionColor = new THREE.Color(0xa855f7);
       break;
     default:
-      factionColor = null; // unclaimed uses pure planet color
+      factionColor = null;
   }
 
   let baseColor;
   if (!factionColor) {
-    // unclaimed = just the planet color
     baseColor = planetBase;
   } else {
-    // claimed = blend planet color with faction tint
     baseColor = planetBase.clone().lerp(factionColor, 0.5);
   }
 
   const control = state.control || 0;
-  // brightness bump with control level
   let intensity = 0.9;
   if (control === 25) intensity = 1.0;
   if (control === 75) intensity = 1.15;
@@ -543,15 +528,13 @@ function applyTerritoryVisuals(id) {
   ensureMinBrightness(color, 0.4);
   mesh.material.color.copy(color);
 
-  // Scale by control (slightly reduced overall so planets stay readable)
   let scale = 1.0;
   if (control === 25) scale = 1.1;
   if (control === 75) scale = 1.25;
   if (control === 100) scale = 1.4;
   mesh.scale.set(scale, scale, scale);
 
-  // Emissive glow for selected + safe
-  let emissive = new THREE.Color(0x050712); // non-zero base so nothing goes dead
+  let emissive = new THREE.Color(0x050712);
   if (selectedId === id) {
     emissive = emissive.add(color.clone().multiplyScalar(0.35));
   }
@@ -567,9 +550,10 @@ function focusOnTerritory(id) {
   if (!mesh) return;
 
   orbitTarget.copy(mesh.position);
-  zoomFactor = Math.min(MAX_ZOOM, 1.7); // pretty close in
+  zoomFactor = Math.min(MAX_ZOOM, 1.9);
   updateCameraPosition();
 }
+
 
 // ---------- UI / EVENTS ----------
 
@@ -667,6 +651,7 @@ function hookEvents() {
       resolveBattle(selectedId, defender, attacker, "attacker");
     });
 }
+
 
 // ---------- RENDERING ----------
 
@@ -791,13 +776,14 @@ function log(text) {
   saveState();
 }
 
+
 // ---------- LOGIC ----------
 
 function onSelectTerritory(id) {
   selectedId = id;
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
   renderSelection();
-  focusOnTerritory(id); // click → zoom in & center on that world
+  focusOnTerritory(id);
 }
 
 function getTerritoryName(id) {
@@ -885,7 +871,6 @@ function resetState() {
   saveState();
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
 
-  // reset camera to full-map view
   orbitTarget.set(0, 0, 0);
   zoomFactor = DEFAULT_ZOOM;
   updateCameraPosition();
