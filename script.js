@@ -16,14 +16,14 @@ const TERRITORIES = [
 // Simple warp-lane graph between worlds
 const WARP_LANES = [
   ["bastior_prime", "harkanis"],
-  ["bastior_prime", "karst_forge"],
-  ["bastior_prime", "veldras_gate"],
-  ["bastior_prime", "trinaxis_minor"],
   ["harkanis", "osiron_spur"],
   ["osiron_spur", "magnus_relay"],
-  ["karst_forge", "veldras_gate"],
-  ["veldras_gate", "kethrax_deep"],
-  ["trinaxis_minor", "kethrax_deep"]
+  ["magnus_relay", "kethrax_deep"],
+  ["kethrax_deep", "trinaxis_minor"],
+  ["trinaxis_minor", "veldras_gate"],
+  ["veldras_gate", "karst_forge"],
+  ["karst_forge", "bastior_prime"]
+
 ];
 
 // ---------- STATE ----------
