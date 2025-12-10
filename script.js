@@ -13,6 +13,19 @@ const TERRITORIES = [
   { id: "magnus_relay", name: "Magnus Relay", x: 15, y: 15, z: 5 }
 ];
 
+// Simple warp-lane graph between worlds
+const WARP_LANES = [
+  ["bastior_prime", "harkanis"],
+  ["bastior_prime", "karst_forge"],
+  ["bastior_prime", "veldras_gate"],
+  ["bastior_prime", "trinaxis_minor"],
+  ["harkanis", "osiron_spur"],
+  ["osiron_spur", "magnus_relay"],
+  ["karst_forge", "veldras_gate"],
+  ["veldras_gate", "kethrax_deep"],
+  ["trinaxis_minor", "kethrax_deep"]
+];
+
 // ---------- STATE ----------
 
 let turnNumber = 1;
@@ -26,12 +39,15 @@ let territoryMeshes = {}; // id -> THREE.Mesh
 let animationFrameId = null;
 let mapViewportEl, canvasEl;
 let raycaster, pointer;
+let warpLaneGroup;
 
-// simple manual orbit
-let zoomFactor = 1;
-const cameraBaseDistance = 200;
-let orbitPhi = Math.PI / 4;    // vertical angle
-let orbitTheta = Math.PI / 6;  // horizontal angle
+// manual orbit / zoom
+let zoomFactor = 1; // >1 = closer, <1 = farther
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+const cameraBaseDistance = 260;
+let orbitPhi = Math.PI / 3; // vertical angle
+let orbitTheta = Math.PI / 6; // horizontal angle
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
@@ -139,7 +155,7 @@ function init3DScene() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x020617);
 
-  camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000);
+  camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 3000);
   updateCameraPosition();
 
   renderer = new THREE.WebGLRenderer({
@@ -152,15 +168,15 @@ function init3DScene() {
   // Lights
   const ambient = new THREE.AmbientLight(0xffffff, 0.7);
   scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(50, 100, 80);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(80, 120, 100);
   scene.add(dirLight);
 
-  // Starfield
+  // Starfield (make it brighter / more obvious)
   const starsGeometry = new THREE.BufferGeometry();
-  const starCount = 1500;
+  const starCount = 2500;
   const positions = new Float32Array(starCount * 3);
-  const radius = 600;
+  const radius = 1000;
 
   for (let i = 0; i < starCount; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
@@ -170,29 +186,35 @@ function init3DScene() {
     positions[i * 3 + 2] = radius * Math.cos(phi);
   }
 
-  starsGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  starsGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(positions, 3)
+  );
 
   const starsMaterial = new THREE.PointsMaterial({
-    color: 0x9ca3af,
-    size: 1.2,
-    sizeAttenuation: true
+    color: 0xffffff,
+    size: 2.0,
+    sizeAttenuation: true,
+    opacity: 0.8,
+    transparent: true
   });
 
   const starField = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starField);
 
-  // Territory spheres
-  const baseRadius = 4;
+  // Territory spheres (bigger + more spaced out)
+  const baseRadius = 8;
+  const spread = 5.5; // higher = more distance between nodes
   TERRITORIES.forEach((t) => {
-    const x = (t.x - 50) * 2.5;
-    const y = (t.y - 50) * -2.5;
-    const z = t.z || 0;
+    const x = (t.x - 50) * spread;
+    const y = (t.y - 50) * -spread;
+    const z = (t.z || 0) * 3; // amplify depth
 
     const geom = new THREE.SphereGeometry(baseRadius, 32, 32);
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshPhongMaterial({
       color: 0x9ca3af,
-      roughness: 0.4,
-      metalness: 0.3
+      shininess: 40,
+      specular: 0x555555
     });
 
     const mesh = new THREE.Mesh(geom, mat);
@@ -204,6 +226,9 @@ function init3DScene() {
 
     applyTerritoryVisuals(t.id);
   });
+
+  // Warp lanes between planets
+  buildWarpLanes();
 
   // Raycaster
   raycaster = new THREE.Raycaster();
@@ -220,15 +245,47 @@ function init3DScene() {
   animate();
 }
 
+function buildWarpLanes() {
+  if (warpLaneGroup) {
+    scene.remove(warpLaneGroup);
+  }
+  warpLaneGroup = new THREE.Group();
+
+  const material = new THREE.LineBasicMaterial({
+    color: 0x4b5563,
+    transparent: true,
+    opacity: 0.9
+  });
+
+  WARP_LANES.forEach(([aId, bId]) => {
+    const aMesh = territoryMeshes[aId];
+    const bMesh = territoryMeshes[bId];
+    if (!aMesh || !bMesh) return;
+
+    const points = [aMesh.position.clone(), bMesh.position.clone()];
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geometry, material);
+    warpLaneGroup.add(line);
+  });
+
+  scene.add(warpLaneGroup);
+}
+
 function animate() {
   animationFrameId = requestAnimationFrame(animate);
+
+  // slow spin on planets to feel alive
+  Object.values(territoryMeshes).forEach((mesh) => {
+    mesh.rotation.y += 0.003;
+  });
+
   renderer.render(scene, camera);
 }
 
-// ---------- CAMERA ORBIT ----------
+// ---------- CAMERA ORBIT / ZOOM ----------
 
 function updateCameraPosition() {
-  const r = cameraBaseDistance * zoomFactor;
+  const r = cameraBaseDistance / zoomFactor; // zoomFactor up => closer
   const x = r * Math.sin(orbitPhi) * Math.cos(orbitTheta);
   const y = r * Math.cos(orbitPhi);
   const z = r * Math.sin(orbitPhi) * Math.sin(orbitTheta);
@@ -244,8 +301,12 @@ function updateCameraPosition() {
 
 function onWheel(e) {
   e.preventDefault();
-  const delta = e.deltaY < 0 ? -0.1 : 0.1;
-  zoomFactor = Math.min(2, Math.max(0.5, zoomFactor + delta));
+  // scroll up (negative deltaY) => zoom in
+  if (e.deltaY < 0) {
+    zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.1);
+  } else {
+    zoomFactor = Math.max(MIN_ZOOM, zoomFactor / 1.1);
+  }
   updateCameraPosition();
 }
 
@@ -260,13 +321,11 @@ function onPointerDown(e) {
   if (!inside) return;
 
   if (e.button === 0) {
-    // left-click: pick OR start drag
-    // we distinguish click vs drag by comparing movement in pointerup
     isDragging = true;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
 
-    // also do a pick immediately for "click world"
+    // Also do pick on click
     handlePick(e.clientX, e.clientY, rect);
   }
 }
@@ -283,8 +342,7 @@ function onPointerMove(e) {
   orbitTheta -= dx * ROT_SPEED;
   orbitPhi -= dy * ROT_SPEED;
 
-  // clamp vertical angle
-  const EPS = 0.1;
+  const EPS = 0.12;
   orbitPhi = Math.max(EPS, Math.min(Math.PI - EPS, orbitPhi));
 
   updateCameraPosition();
@@ -328,45 +386,45 @@ function applyTerritoryVisuals(id) {
   const state = mapState[id];
   if (!state) return;
 
-  // Base colors
+  // Base colors by faction
   let baseColor;
   switch (state.faction) {
     case "defenders":
-      baseColor = new THREE.Color(0x4ade80);
+      baseColor = new THREE.Color(0x4ade80); // green
       break;
     case "attackers":
-      baseColor = new THREE.Color(0xfb7185);
+      baseColor = new THREE.Color(0xfb7185); // red
       break;
     case "raiders":
-      baseColor = new THREE.Color(0xa855f7);
+      baseColor = new THREE.Color(0xa855f7); // purple
       break;
     default:
-      baseColor = new THREE.Color(0x9ca3af);
+      baseColor = new THREE.Color(0x9ca3af); // gray
   }
 
   const control = state.control || 0;
-  let intensity = 0.7;
-  if (control === 25) intensity = 0.9;
-  if (control === 75) intensity = 1.1;
-  if (control === 100) intensity = 1.3;
+  let intensity = 0.8;
+  if (control === 25) intensity = 1.0;
+  if (control === 75) intensity = 1.2;
+  if (control === 100) intensity = 1.4;
 
   const color = baseColor.clone().multiplyScalar(intensity);
   mesh.material.color.copy(color);
 
   // Scale by control
-  let scale = 1;
-  if (control === 25) scale = 1.05;
-  if (control === 75) scale = 1.15;
-  if (control === 100) scale = 1.25;
+  let scale = 1.1;
+  if (control === 25) scale = 1.2;
+  if (control === 75) scale = 1.35;
+  if (control === 100) scale = 1.5;
   mesh.scale.set(scale, scale, scale);
 
-  // Emissive for selected + safe
+  // Emissive glow for selected + safe
   let emissive = new THREE.Color(0x000000);
   if (selectedId === id) {
     emissive = emissive.add(color.clone().multiplyScalar(0.4));
   }
   if (state.safe) {
-    emissive = emissive.add(new THREE.Color(0x38bdf8).multiplyScalar(0.35));
+    emissive = emissive.add(new THREE.Color(0x38bdf8).multiplyScalar(0.4));
   }
   mesh.material.emissive = emissive;
 }
@@ -377,14 +435,14 @@ function hookEvents() {
   document
     .getElementById("zoomInBtn")
     .addEventListener("click", () => {
-      zoomFactor = Math.min(2, zoomFactor + 0.15);
+      zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.15);
       updateCameraPosition();
     });
 
   document
     .getElementById("zoomOutBtn")
     .addEventListener("click", () => {
-      zoomFactor = Math.max(0.5, zoomFactor - 0.15);
+      zoomFactor = Math.max(MIN_ZOOM, zoomFactor / 1.15);
       updateCameraPosition();
     });
 
@@ -610,7 +668,8 @@ function resolveBattle(territoryId, defenderFaction, attackerFaction, winner) {
 
   const currentOwner = state.faction;
   const control = state.control;
-  const winningFaction = winner === "defender" ? defenderFaction : attackerFaction;
+  const winningFaction =
+    winner === "defender" ? defenderFaction : attackerFaction;
 
   if (!["defenders", "attackers", "raiders"].includes(winningFaction)) return;
 
