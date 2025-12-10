@@ -3,33 +3,34 @@
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
 const TERRITORIES = [
-  // === DEFENDERS HOME REGION – "Bastior Reach" (top) ===
-  { id: "bastior_prime",   name: "Bastior Prime",   x: 50, y: 82, z: 40 },
-  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 42, y: 88, z: 55 },
-  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 58, y: 90, z: 60 },
+  // === DEFENDERS HOME REGION – "Bastior Reach" (far back / high) ===
+  { id: "bastior_prime",   name: "Bastior Prime",   x: 50, y: 82, z: 60 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 42, y: 88, z: 90 },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 58, y: 90, z: 120 },
 
-  // === RAIDERS HOME REGION – "Harkanis Fringe" (bottom-left) ===
-  { id: "harkanis",        name: "Harkanis",        x: 22, y: 18, z: -45 },
-  { id: "emberhold",       name: "Emberhold",       x: 30, y: 16, z: -35 },
-  { id: "magnus_relay",    name: "Magnus Relay",    x: 26, y: 26, z: -20 },
+  // === RAIDERS HOME REGION – "Harkanis Fringe" (close / front-left) ===
+  { id: "harkanis",        name: "Harkanis",        x: 22, y: 18, z: -100 },
+  { id: "emberhold",       name: "Emberhold",       x: 30, y: 16, z: -80 },
+  { id: "magnus_relay",    name: "Magnus Relay",    x: 26, y: 26, z: -60 },
 
-  // === ATTACKERS HOME REGION – "Karst Expanse" (bottom-right) ===
-  { id: "karst_forge",     name: "Karst Forge",     x: 78, y: 18, z: 35 },
-  { id: "veldras_gate",    name: "Veldras Gate",    x: 86, y: 24, z: 10 },
-  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 74, y: 26, z: 55 },
+  // === ATTACKERS HOME REGION – "Karst Expanse" (mid-depth / right) ===
+  { id: "karst_forge",     name: "Karst Forge",     x: 78, y: 18, z: 10 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x: 86, y: 24, z: 40 },
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 74, y: 26, z: 70 },
 
-  // === WILD SPACE – central contested region (9 worlds) ===
+  // === WILD SPACE – central contested region (mixed depths) ===
   { id: "voryn_crossing",  name: "Voryn Crossing",  x: 50, y: 60, z: 0 },
-  { id: "osiron_spur",     name: "Osiron Spur",     x: 38, y: 60, z: -10 },
-  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 62, y: 64, z: 15 },
-  { id: "vorun_halo",      name: "Vorun Halo",      x: 70, y: 52, z: 25 },
-  { id: "cinder_wake",     name: "Cinder Wake",     x: 60, y: 44, z: -5 },
-  { id: "silas_gate",      name: "Silas Gate",      x: 40, y: 44, z: -15 },
-  { id: "threnos_void",    name: "Threnos Void",    x: 32, y: 52, z: 5 },
-  { id: "helios_spine",    name: "Helios Spine",    x: 54, y: 34, z: -25 },
-  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 46, y: 40, z: -30 }
+  { id: "osiron_spur",     name: "Osiron Spur",     x: 38, y: 60, z: -30 },
+  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 62, y: 64, z: 20 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x: 70, y: 52, z: 50 },
+  { id: "cinder_wake",     name: "Cinder Wake",     x: 60, y: 44, z: -20 },
+  { id: "silas_gate",      name: "Silas Gate",      x: 40, y: 44, z: -40 },
+  { id: "threnos_void",    name: "Threnos Void",    x: 32, y: 52, z: -10 },
+  { id: "helios_spine",    name: "Helios Spine",    x: 54, y: 34, z: 30 },
+  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 46, y: 40, z: -50 }
 ];
 
+// Simple warp-lane graph between worlds
 const WARP_LANES = [
   // === DEFENDER HOME – Bastior Reach (triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
@@ -153,14 +154,14 @@ let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 2.0;
 // farther base distance so we still see most of the map with deeper Z
-const cameraBaseDistance = 600;
+const cameraBaseDistance = 700;
 
 let orbitPhi = Math.PI / 3;
 let orbitTheta = Math.PI / 6;
 let orbitTarget = new THREE.Vector3(0, 0, 0);
 
-// depth scaling – increased so the map feels less flat
-const Z_DEPTH_FACTOR = 8;
+// depth scaling – stronger 3D separation
+const Z_DEPTH_FACTOR = 6;
 
 let isDragging = false;
 let lastMouseX = 0;
@@ -271,7 +272,7 @@ function init3DScene() {
 
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 3000);
+  camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 4000);
   updateCameraPosition();
 
   renderer = new THREE.WebGLRenderer({
@@ -293,7 +294,7 @@ function init3DScene() {
   const starsGeometry = new THREE.BufferGeometry();
   const starCount = 2600;
   const positions = new Float32Array(starCount * 3);
-  const radius = 1300;
+  const radius = 1400;
 
   for (let i = 0; i < starCount; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
@@ -325,7 +326,7 @@ function init3DScene() {
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
     const y = (t.y - 50) * -spread;
-    const z = (t.z || 0) * Z_DEPTH_FACTOR;
+    const z = (t.z || 0) * Z_DEPTH_FACTOR; // Z now uses much larger raw values
 
     const sizeFactor = PLANET_SIZE_FACTORS[t.id] || 1.0;
     const planetRadius = baseRadius * sizeFactor;
@@ -522,6 +523,7 @@ function onWindowResize() {
 
 // ---------- VISUALS ----------
 
+// Ensure color never gets too dark
 function ensureMinBrightness(color, minL = 0.4) {
   const hsl = {};
   color.getHSL(hsl);
@@ -593,6 +595,7 @@ function applyTerritoryVisuals(id) {
   mesh.material.emissive.copy(emissive);
 }
 
+// Center and zoom on a specific territory
 function focusOnTerritory(id) {
   const mesh = territoryMeshes[id];
   if (!mesh) return;
