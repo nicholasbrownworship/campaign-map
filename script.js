@@ -80,6 +80,31 @@ const WARP_LANES = [
   ["cinder_wake",    "silas_gate"]
 ];
 
+// Per-planet base colors (for "planet-y" look)
+const PLANET_BASE_COLORS = {
+  bastior_prime:  0xf5d87a,
+  trinaxis_minor: 0x7ac0f5,
+  aurum_refuge:   0xe6f2c2,
+
+  harkanis:       0x7b1f1f,
+  emberhold:      0xff8a3c,
+  magnus_relay:   0xb0b0b0,
+
+  karst_forge:    0xffb347,
+  veldras_gate:   0x9d8cff,
+  kethrax_deep:   0x4dbd8b,
+
+  voryn_crossing: 0xccccff,
+  osiron_spur:    0x9fa7b3,
+  duskfall_watch: 0x505b86,
+  vorun_halo:     0xf2f0ff,
+  cinder_wake:    0x4a4038,
+  silas_gate:     0xaee1ff,
+  threnos_void:   0x1e2230,
+  helios_spine:   0xffe8b3,
+  nadir_outpost:  0x7f8b99
+};
+
 
 // ---------- STATE ----------
 
@@ -97,15 +122,18 @@ let raycaster, pointer;
 let warpLaneGroup;
 
 // manual orbit / zoom
-let zoomFactor = 1; // >1 = closer, <1 = farther
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 3;
-const cameraBaseDistance = 260;
+let zoomFactor = 0.9; // start slightly farther out
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 1.6;
+const cameraBaseDistance = 320; // farther camera → whole map feels smaller
 let orbitPhi = Math.PI / 3; // vertical angle
 let orbitTheta = Math.PI / 6; // horizontal angle
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
+
+// how much Z depth matters visually
+const Z_DEPTH_FACTOR = 4; // px per z-unit for position
 
 // UI elements
 let turnLabelEl, zoomLabelEl;
@@ -227,7 +255,7 @@ function init3DScene() {
   dirLight.position.set(80, 120, 100);
   scene.add(dirLight);
 
-  // Starfield (make it brighter / more obvious)
+  // Starfield
   const starsGeometry = new THREE.BufferGeometry();
   const starCount = 2500;
   const positions = new Float32Array(starCount * 3);
@@ -248,28 +276,29 @@ function init3DScene() {
 
   const starsMaterial = new THREE.PointsMaterial({
     color: 0xffffff,
-    size: 2.0,
+    size: 1.8,
     sizeAttenuation: true,
-    opacity: 0.8,
+    opacity: 0.85,
     transparent: true
   });
 
   const starField = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starField);
 
-  // Territory spheres (bigger + more spaced out)
-  const baseRadius = 8;
-  const spread = 5.5; // higher = more distance between nodes
+  // Territory spheres (smaller + more depth)
+  const baseRadius = 6;     // was 8
+  const spread = 4.5;       // was 5.5, so layout is tighter
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
     const y = (t.y - 50) * -spread;
-    const z = (t.z || 0) * 3; // amplify depth
+    const z = (t.z || 0) * Z_DEPTH_FACTOR;
 
     const geom = new THREE.SphereGeometry(baseRadius, 32, 32);
     const mat = new THREE.MeshPhongMaterial({
       color: 0x9ca3af,
       shininess: 40,
-      specular: 0x555555
+      specular: 0x555555,
+      emissive: 0x000000
     });
 
     const mesh = new THREE.Mesh(geom, mat);
@@ -307,9 +336,9 @@ function buildWarpLanes() {
   warpLaneGroup = new THREE.Group();
 
   const material = new THREE.LineBasicMaterial({
-    color: 0x4b5563,
+    color: 0x64748b,
     transparent: true,
-    opacity: 0.9
+    opacity: 0.75
   });
 
   WARP_LANES.forEach(([aId, bId]) => {
@@ -441,47 +470,62 @@ function applyTerritoryVisuals(id) {
   const state = mapState[id];
   if (!state) return;
 
-  // Base colors by faction
-  let baseColor;
+  // Planet base color (for planet personality)
+  const planetBase = new THREE.Color(
+    PLANET_BASE_COLORS[id] !== undefined ? PLANET_BASE_COLORS[id] : 0x9ca3af
+  );
+
+  // Faction tint
+  let factionColor;
   switch (state.faction) {
     case "defenders":
-      baseColor = new THREE.Color(0x4ade80); // green
+      factionColor = new THREE.Color(0x4ade80); // green
       break;
     case "attackers":
-      baseColor = new THREE.Color(0xfb7185); // red
+      factionColor = new THREE.Color(0xfb7185); // red
       break;
     case "raiders":
-      baseColor = new THREE.Color(0xa855f7); // purple
+      factionColor = new THREE.Color(0xa855f7); // purple
       break;
     default:
-      baseColor = new THREE.Color(0x9ca3af); // gray
+      factionColor = null; // unclaimed uses pure planet color
+  }
+
+  let baseColor;
+  if (!factionColor) {
+    // unclaimed = just the planet color
+    baseColor = planetBase;
+  } else {
+    // claimed = blend planet color with faction tint
+    baseColor = planetBase.clone().lerp(factionColor, 0.5);
   }
 
   const control = state.control || 0;
-  let intensity = 0.8;
+  // brightness bump with control level
+  let intensity = 0.85;
   if (control === 25) intensity = 1.0;
-  if (control === 75) intensity = 1.2;
-  if (control === 100) intensity = 1.4;
+  if (control === 75) intensity = 1.15;
+  if (control === 100) intensity = 1.3;
 
   const color = baseColor.clone().multiplyScalar(intensity);
   mesh.material.color.copy(color);
 
-  // Scale by control
-  let scale = 1.1;
-  if (control === 25) scale = 1.2;
-  if (control === 75) scale = 1.35;
-  if (control === 100) scale = 1.5;
+  // Scale by control (slightly reduced overall so planets stay smaller)
+  let scale = 1.0;
+  if (control === 25) scale = 1.1;
+  if (control === 75) scale = 1.25;
+  if (control === 100) scale = 1.4;
   mesh.scale.set(scale, scale, scale);
 
   // Emissive glow for selected + safe
   let emissive = new THREE.Color(0x000000);
   if (selectedId === id) {
-    emissive = emissive.add(color.clone().multiplyScalar(0.4));
+    emissive = emissive.add(color.clone().multiplyScalar(0.35));
   }
   if (state.safe) {
     emissive = emissive.add(new THREE.Color(0x38bdf8).multiplyScalar(0.4));
   }
-  mesh.material.emissive = emissive;
+  mesh.material.emissive.copy(emissive);
 }
 
 // ---------- UI / EVENTS ----------
@@ -760,7 +804,9 @@ function resolveBattle(territoryId, defenderFaction, attackerFaction, winner) {
   updateFactionOverview();
 
   log(
-    `${winner === "defender" ? "Defender" : "Attacker"} victory at ${worldName} – new owner: ${
+    `${
+      winner === "defender" ? "Defender" : "Attacker"
+    } victory at ${worldName} – new owner: ${
       state.faction
     } (${state.control}%).`
   );
