@@ -105,6 +105,32 @@ const PLANET_BASE_COLORS = {
   nadir_outpost:  0x8a96a5
 };
 
+// Planet size factors (relative to base radius)
+// Big setpieces > regional hubs > wildspace rocks
+const PLANET_SIZE_FACTORS = {
+  bastior_prime:  1.5,
+  trinaxis_minor: 1.2,
+  aurum_refuge:   1.2,
+
+  harkanis:       1.4,
+  emberhold:      1.1,
+  magnus_relay:   1.1,
+
+  karst_forge:    1.4,
+  veldras_gate:   1.2,
+  kethrax_deep:   1.2,
+
+  voryn_crossing: 1.1,
+  osiron_spur:    1.0,
+  duskfall_watch: 1.0,
+  vorun_halo:     1.0,
+  cinder_wake:    0.9,
+  silas_gate:     0.9,
+  threnos_void:   0.9,
+  helios_spine:   1.0,
+  nadir_outpost:  0.9
+};
+
 
 // ---------- STATE ----------
 
@@ -115,29 +141,30 @@ let selectedId = null;
 
 // 3D
 let scene, camera, renderer;
-let territoryMeshes = {}; // id -> THREE.Mesh
+let territoryMeshes = {};      // id -> planet mesh
+let factionRingMeshes = {};     // id -> ring mesh
 let animationFrameId = null;
 let mapViewportEl, canvasEl;
 let raycaster, pointer;
 let warpLaneGroup;
 
 // camera / orbit
-const DEFAULT_ZOOM = 0.7; // fairly zoomed out by default
+const DEFAULT_ZOOM = 0.7;
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 2.0;
-const cameraBaseDistance = 520; // higher = farther away => more map visible
+const cameraBaseDistance = 520;
 
-let orbitPhi = Math.PI / 3; // vertical angle
-let orbitTheta = Math.PI / 6; // horizontal angle
+let orbitPhi = Math.PI / 3;
+let orbitTheta = Math.PI / 6;
 let orbitTarget = new THREE.Vector3(0, 0, 0);
+
+// depth scaling
+const Z_DEPTH_FACTOR = 4;
 
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
-
-// depth scaling
-const Z_DEPTH_FACTOR = 4;
 
 // UI elements
 let turnLabelEl, zoomLabelEl;
@@ -243,7 +270,6 @@ function init3DScene() {
   const height = mapViewportEl.clientHeight || 300;
 
   scene = new THREE.Scene();
-  // no explicit background; let CSS show through
 
   camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 3000);
   updateCameraPosition();
@@ -251,7 +277,7 @@ function init3DScene() {
   renderer = new THREE.WebGLRenderer({
     canvas: canvasEl,
     antialias: true,
-    alpha: true // transparent background so CSS starmap is visible
+    alpha: true // let CSS background show through
   });
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -263,7 +289,7 @@ function init3DScene() {
   dirLight.position.set(80, 120, 100);
   scene.add(dirLight);
 
-  // Starfield (3D points around everything)
+  // Starfield
   const starsGeometry = new THREE.BufferGeometry();
   const starCount = 2600;
   const positions = new Float32Array(starCount * 3);
@@ -293,40 +319,60 @@ function init3DScene() {
   const starField = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starField);
 
-  // Territory spheres
-  const baseRadius = 6;
-  const spread = 3.8; // how far apart points are in world units
+  // Territory planets + faction rings
+  const baseRadius = 10;    // bigger base planet size
+  const spread = 3.8;       // horizontal/vertical spread
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
     const y = (t.y - 50) * -spread;
     const z = (t.z || 0) * Z_DEPTH_FACTOR;
 
-    const geom = new THREE.SphereGeometry(baseRadius, 32, 32);
+    const sizeFactor = PLANET_SIZE_FACTORS[t.id] || 1.0;
+    const planetRadius = baseRadius * sizeFactor;
+
+    const geom = new THREE.SphereGeometry(planetRadius, 32, 32);
     const mat = new THREE.MeshPhongMaterial({
       color: 0x9ca3af,
       shininess: 40,
       specular: 0x555555,
-      emissive: 0x050712 // small emissive so nothing is ever fully black
+      emissive: 0x050712 // small emissive so nothing is fully black
     });
 
     const mesh = new THREE.Mesh(geom, mat);
     mesh.position.set(x, y, z);
     mesh.userData.id = t.id;
 
+    // Faction ring (equatorial torus)
+    const ringGeom = new THREE.TorusGeometry(
+      planetRadius * 1.25,
+      planetRadius * 0.18,
+      16,
+      48
+    );
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.0
+    });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    mesh.add(ring);
+
     scene.add(mesh);
     territoryMeshes[t.id] = mesh;
+    factionRingMeshes[t.id] = ring;
 
     applyTerritoryVisuals(t.id);
   });
 
-  // Warp lanes between planets
+  // Warp lanes
   buildWarpLanes();
 
   // Raycaster
   raycaster = new THREE.Raycaster();
   pointer = new THREE.Vector2();
 
-  // Mouse events for orbit + picking
+  // Mouse events
   canvasEl.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
@@ -476,7 +522,7 @@ function onWindowResize() {
 
 // ---------- VISUALS ----------
 
-// Ensure color never gets too dark to see
+// Ensure color never gets too dark
 function ensureMinBrightness(color, minL = 0.4) {
   const hsl = {};
   color.getHSL(hsl);
@@ -492,51 +538,55 @@ function applyTerritoryVisuals(id) {
   const state = mapState[id];
   if (!state) return;
 
+  const ring = factionRingMeshes[id];
+
   const planetBase = new THREE.Color(
     PLANET_BASE_COLORS[id] !== undefined ? PLANET_BASE_COLORS[id] : 0x9ca3af
   );
 
-  let factionColor;
-  switch (state.faction) {
-    case "defenders":
-      factionColor = new THREE.Color(0x4ade80);
-      break;
-    case "attackers":
-      factionColor = new THREE.Color(0xfb7185);
-      break;
-    case "raiders":
-      factionColor = new THREE.Color(0xa855f7);
-      break;
-    default:
-      factionColor = null;
-  }
-
-  let baseColor;
-  if (!factionColor) {
-    baseColor = planetBase;
-  } else {
-    baseColor = planetBase.clone().lerp(factionColor, 0.5);
-  }
-
   const control = state.control || 0;
-  let intensity = 0.9;
-  if (control === 25) intensity = 1.0;
-  if (control === 75) intensity = 1.15;
-  if (control === 100) intensity = 1.3;
 
-  const color = baseColor.clone().multiplyScalar(intensity);
+  // Planet color = identity only (no heavy faction tint)
+  const color = planetBase.clone();
   ensureMinBrightness(color, 0.4);
   mesh.material.color.copy(color);
 
+  // Scale slightly with control level
   let scale = 1.0;
   if (control === 25) scale = 1.1;
   if (control === 75) scale = 1.25;
   if (control === 100) scale = 1.4;
   mesh.scale.set(scale, scale, scale);
 
+  // Faction color used for the ring (labeling ownership)
+  let ringColorHex = null;
+  switch (state.faction) {
+    case "defenders":
+      ringColorHex = 0x4ade80;
+      break;
+    case "attackers":
+      ringColorHex = 0xfb7185;
+      break;
+    case "raiders":
+      ringColorHex = 0xa855f7;
+      break;
+    default:
+      ringColorHex = null;
+  }
+
+  if (ring) {
+    if (!ringColorHex) {
+      ring.material.opacity = 0.0;
+    } else {
+      ring.material.color.setHex(ringColorHex);
+      ring.material.opacity = 0.9;
+    }
+  }
+
+  // Emissive = subtle + selection/safe glow
   let emissive = new THREE.Color(0x050712);
   if (selectedId === id) {
-    emissive = emissive.add(color.clone().multiplyScalar(0.35));
+    emissive = emissive.add(color.clone().multiplyScalar(0.25));
   }
   if (state.safe) {
     emissive = emissive.add(new THREE.Color(0x38bdf8).multiplyScalar(0.4));
