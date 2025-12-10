@@ -3,31 +3,31 @@
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
 const TERRITORIES = [
-  // === DEFENDERS HOME REGION – "Bastior Reach" (far back / high) ===
-  { id: "bastior_prime",   name: "Bastior Prime",   x: 50, y: 82, z: 60 },
-  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 42, y: 88, z: 90 },
-  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 58, y: 90, z: 120 },
+  // === DEFENDERS HOME REGION – "Bastior Reach" (high + far back) ===
+  { id: "bastior_prime",   name: "Bastior Prime",   x: 52, y: 88, z: 140 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 38, y: 94, z: 175 },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 66, y: 96, z: 210 },
 
-  // === RAIDERS HOME REGION – "Harkanis Fringe" (close / front-left) ===
-  { id: "harkanis",        name: "Harkanis",        x: 22, y: 18, z: -100 },
-  { id: "emberhold",       name: "Emberhold",       x: 30, y: 16, z: -80 },
-  { id: "magnus_relay",    name: "Magnus Relay",    x: 26, y: 26, z: -60 },
+  // === RAIDERS HOME REGION – "Harkanis Fringe" (low-left + very close) ===
+  { id: "harkanis",        name: "Harkanis",        x: 18, y: 14, z: -190 },
+  { id: "emberhold",       name: "Emberhold",       x: 30, y: 12, z: -165 },
+  { id: "magnus_relay",    name: "Magnus Relay",    x: 24, y: 26, z: -145 },
 
-  // === ATTACKERS HOME REGION – "Karst Expanse" (mid-depth / right) ===
-  { id: "karst_forge",     name: "Karst Forge",     x: 78, y: 18, z: 10 },
-  { id: "veldras_gate",    name: "Veldras Gate",    x: 86, y: 24, z: 40 },
-  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 74, y: 26, z: 70 },
+  // === ATTACKERS HOME REGION – "Karst Expanse" (low-right + mid-depth) ===
+  { id: "karst_forge",     name: "Karst Forge",     x: 82, y: 16, z: 40 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x: 90, y: 26, z: 95 },
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 72, y: 28, z: 135 },
 
-  // === WILD SPACE – central contested region (mixed depths) ===
-  { id: "voryn_crossing",  name: "Voryn Crossing",  x: 50, y: 60, z: 0 },
-  { id: "osiron_spur",     name: "Osiron Spur",     x: 38, y: 60, z: -30 },
-  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 62, y: 64, z: 20 },
-  { id: "vorun_halo",      name: "Vorun Halo",      x: 70, y: 52, z: 50 },
-  { id: "cinder_wake",     name: "Cinder Wake",     x: 60, y: 44, z: -20 },
-  { id: "silas_gate",      name: "Silas Gate",      x: 40, y: 44, z: -40 },
-  { id: "threnos_void",    name: "Threnos Void",    x: 32, y: 52, z: -10 },
-  { id: "helios_spine",    name: "Helios Spine",    x: 54, y: 34, z: 30 },
-  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 46, y: 40, z: -50 }
+  // === WILD SPACE – central contested region (layered between all three) ===
+  { id: "voryn_crossing",  name: "Voryn Crossing",  x: 52, y: 60, z: 10 },
+  { id: "osiron_spur",     name: "Osiron Spur",     x: 36, y: 60, z: -90 },
+  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 66, y: 66, z: 55 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x: 76, y: 50, z: 120 },
+  { id: "cinder_wake",     name: "Cinder Wake",     x: 60, y: 42, z: -40 },
+  { id: "silas_gate",      name: "Silas Gate",      x: 38, y: 44, z: -120 },
+  { id: "threnos_void",    name: "Threnos Void",    x: 30, y: 52, z: -30 },
+  { id: "helios_spine",    name: "Helios Spine",    x: 58, y: 34, z: 80 },
+  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 46, y: 38, z: -130 }
 ];
 
 // Simple warp-lane graph between worlds
