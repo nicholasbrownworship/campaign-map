@@ -38,7 +38,7 @@ body {
   color: var(--text);
 }
 
-/* Layout shell */
+/* Layout */
 
 .app-shell {
   min-height: 100vh;
@@ -105,7 +105,7 @@ body {
   gap: 10px;
 }
 
-/* Turn + buttons */
+/* Turn box */
 
 .turn-box {
   display: flex;
@@ -259,7 +259,7 @@ body {
   text-align: center;
 }
 
-/* Map viewport */
+/* Map viewport / canvas */
 
 .map-viewport {
   position: relative;
@@ -270,8 +270,6 @@ body {
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   background: radial-gradient(circle at center, #020617 0, #000 100%);
 }
-
-/* Canvas fills the space */
 
 #galaxyCanvas {
   width: 100%;
@@ -341,17 +339,6 @@ select {
   background: #020617;
   color: var(--text);
   font-size: 0.85rem;
-}
-
-input[type="text"] {
-  width: 100%;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--border-soft);
-  background: #020617;
-  color: var(--text);
-  font-size: 0.85rem;
-  margin-top: 4px;
 }
 
 input[type="checkbox"] {
