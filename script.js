@@ -63,7 +63,6 @@ const WARP_LANES = [
   ["kethrax_deep",   "cinder_wake"],
 
   // === Wild-space web (central contested region) ===
-  // Large ring:
   ["voryn_crossing", "duskfall_watch"],
   ["duskfall_watch", "vorun_halo"],
   ["vorun_halo",     "cinder_wake"],
@@ -73,61 +72,61 @@ const WARP_LANES = [
   ["threnos_void",   "osiron_spur"],
   ["osiron_spur",    "voryn_crossing"],
 
-  // Extra links so it's not a single loop:
+  // Extra cross-links
   ["nadir_outpost",  "helios_spine"],
   ["nadir_outpost",  "osiron_spur"],
   ["voryn_crossing", "nadir_outpost"],
   ["cinder_wake",    "silas_gate"]
 ];
 
-// Base planet colors (no pure black)
+// Base planet colors (distinct, no grey blobs)
 const PLANET_BASE_COLORS = {
-  bastior_prime:  0xf5d87a,
-  trinaxis_minor: 0x7ac0f5,
-  aurum_refuge:   0xe6f2c2,
+  bastior_prime:  0xffe08a, // warm sun-gold
+  trinaxis_minor: 0x7ad0ff, // bright blue
+  aurum_refuge:   0xcfff8a, // yellow-green
 
-  harkanis:       0x8c2f2f,
-  emberhold:      0xff9b4d,
-  magnus_relay:   0xc0c4cc,
+  harkanis:       0xff6b6b, // hot red
+  emberhold:      0xff9b4d, // orange
+  magnus_relay:   0x9aa5ff, // periwinkle
 
-  karst_forge:    0xffb347,
-  veldras_gate:   0xa79cff,
-  kethrax_deep:   0x5fd3a0,
+  karst_forge:    0xffc857, // amber
+  veldras_gate:   0xb57aff, // violet
+  kethrax_deep:   0x3ee6a3, // teal
 
-  voryn_crossing: 0xd8d8ff,
-  osiron_spur:    0xa7b4c4,
-  duskfall_watch: 0x5a6791,
-  vorun_halo:     0xf5f3ff,
-  cinder_wake:    0x5a4a3a,
-  silas_gate:     0xb7e6ff,
-  threnos_void:   0x283044,
-  helios_spine:   0xffebbb,
-  nadir_outpost:  0x8a96a5
+  voryn_crossing: 0xfaf3ff, // pale lilac
+  osiron_spur:    0x8fb5ff, // sky blue
+  duskfall_watch: 0x5c6cff, // deep blue-purple
+  vorun_halo:     0xfff2b3, // pale yellow
+  cinder_wake:    0xd47a52, // burnt orange
+  silas_gate:     0x7ff5e3, // aqua
+  threnos_void:   0x394b7a, // indigo
+  helios_spine:   0xffdd9e, // soft gold
+  nadir_outpost:  0xa3b4c8  // steel blue
 };
 
 // Planet size factors (relative to base radius)
 const PLANET_SIZE_FACTORS = {
-  bastior_prime:  1.6,
-  trinaxis_minor: 1.3,
-  aurum_refuge:   1.3,
+  bastior_prime:  1.7,
+  trinaxis_minor: 1.4,
+  aurum_refuge:   1.4,
 
-  harkanis:       1.5,
-  emberhold:      1.2,
-  magnus_relay:   1.2,
+  harkanis:       1.6,
+  emberhold:      1.3,
+  magnus_relay:   1.3,
 
-  karst_forge:    1.5,
-  veldras_gate:   1.3,
-  kethrax_deep:   1.3,
+  karst_forge:    1.6,
+  veldras_gate:   1.4,
+  kethrax_deep:   1.4,
 
-  voryn_crossing: 1.2,
-  osiron_spur:    1.1,
-  duskfall_watch: 1.1,
-  vorun_halo:     1.1,
-  cinder_wake:    1.0,
-  silas_gate:     1.0,
-  threnos_void:   1.0,
-  helios_spine:   1.1,
-  nadir_outpost:  1.0
+  voryn_crossing: 1.3,
+  osiron_spur:    1.2,
+  duskfall_watch: 1.2,
+  vorun_halo:     1.2,
+  cinder_wake:    1.1,
+  silas_gate:     1.1,
+  threnos_void:   1.1,
+  helios_spine:   1.2,
+  nadir_outpost:  1.1
 };
 
 
@@ -148,17 +147,17 @@ let raycaster, pointer;
 let warpLaneGroup;
 
 // camera / orbit
-const DEFAULT_ZOOM = 0.6;        // more zoomed out to see more of the map
+const DEFAULT_ZOOM = 0.6;
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 2.0;
-const cameraBaseDistance = 750;  // farther back camera for overview
+const cameraBaseDistance = 780;
 
-let orbitPhi = Math.PI / 2.6;    // slightly more side-on
+let orbitPhi = Math.PI / 2.6;
 let orbitTheta = Math.PI / 6;
 let orbitTarget = new THREE.Vector3(0, 0, 0);
 
-// depth scaling – still 3D, but pulled in a bit
+// depth scaling
 const Z_DEPTH_FACTOR = 4.5;
 
 let isDragging = false;
@@ -282,9 +281,9 @@ function init3DScene() {
   renderer.setPixelRatio(window.devicePixelRatio);
 
   // Lights
-  const ambient = new THREE.AmbientLight(0xffffff, 0.75);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.85);
   scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
   dirLight.position.set(80, 120, 100);
   scene.add(dirLight);
 
@@ -319,8 +318,8 @@ function init3DScene() {
   scene.add(starField);
 
   // Territory planets + faction rings
-  const baseRadius = 12;    // bigger base planet size for easier clicking
-  const spread = 3.0;       // smaller spread so the map is tighter / easier to see
+  const baseRadius = 12;    // base planet size
+  const spread = 3.8;       // a bit more spread so planets aren't cramped
 
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
@@ -331,21 +330,21 @@ function init3DScene() {
     const planetRadius = baseRadius * sizeFactor;
 
     const geom = new THREE.SphereGeometry(planetRadius, 32, 32);
-    const mat = new THREE.MeshPhongMaterial({
-      color: 0x9ca3af,
-      shininess: 40,
-      specular: 0x555555,
-      emissive: 0x050712 // small emissive so nothing is fully black
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      metalness: 0.15,
+      roughness: 0.6,
+      emissive: 0x050712
     });
 
     const mesh = new THREE.Mesh(geom, mat);
     mesh.position.set(x, y, z);
     mesh.userData.id = t.id;
 
-    // Faction ring (equatorial torus)
+    // Faction ring (ownership color only)
     const ringGeom = new THREE.TorusGeometry(
-      planetRadius * 1.25,
-      planetRadius * 0.18,
+      planetRadius * 1.3,
+      planetRadius * 0.2,
       16,
       48
     );
@@ -444,7 +443,6 @@ function updateCameraPosition() {
 
 function onWheel(e) {
   e.preventDefault();
-  // gentler zoom steps so it’s not jumpy
   if (e.deltaY < 0) {
     zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.07);
   } else {
@@ -468,7 +466,6 @@ function onPointerDown(e) {
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
 
-    // pick on mouse down
     handlePick(e.clientX, e.clientY, rect);
   }
 }
@@ -481,7 +478,7 @@ function onPointerMove(e) {
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
 
-  const ROT_SPEED = 0.003; // slower rotation for better control
+  const ROT_SPEED = 0.003;
   orbitTheta -= dx * ROT_SPEED;
   orbitPhi -= dy * ROT_SPEED;
 
@@ -524,12 +521,13 @@ function onWindowResize() {
 
 // ---------- VISUALS ----------
 
-function ensureMinBrightness(color, minL = 0.4) {
+// Make sure planet colors are bright & saturated, not muddy grey
+function makeVibrant(color, minL = 0.45, minS = 0.5) {
   const hsl = {};
   color.getHSL(hsl);
-  if (hsl.l < minL) {
-    color.setHSL(hsl.h, hsl.s, minL);
-  }
+  if (hsl.l < minL) hsl.l = minL;
+  if (hsl.s < minS) hsl.s = minS;
+  color.setHSL(hsl.h, hsl.s, hsl.l);
   return color;
 }
 
@@ -547,9 +545,9 @@ function applyTerritoryVisuals(id) {
 
   const control = state.control || 0;
 
-  // Planet color = identity only
+  // Planet: identity color only (ownership is ring)
   const color = planetBase.clone();
-  ensureMinBrightness(color, 0.4);
+  makeVibrant(color);
   mesh.material.color.copy(color);
 
   // Scale with control level
@@ -559,7 +557,7 @@ function applyTerritoryVisuals(id) {
   if (control === 100) scale = 1.4;
   mesh.scale.set(scale, scale, scale);
 
-  // Faction ring color (ownership label)
+  // Faction ring = ownership color
   let ringColorHex = null;
   switch (state.faction) {
     case "defenders":
@@ -580,7 +578,7 @@ function applyTerritoryVisuals(id) {
       ring.material.opacity = 0.0;
     } else {
       ring.material.color.setHex(ringColorHex);
-      ring.material.opacity = 0.9;
+      ring.material.opacity = 0.95;
     }
   }
 
