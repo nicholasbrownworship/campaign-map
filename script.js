@@ -147,18 +147,18 @@ let raycaster, pointer;
 let warpLaneGroup;
 
 // camera / orbit
-const DEFAULT_ZOOM = 0.6;
+const DEFAULT_ZOOM = 0.8;     // slightly more zoomed out
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 2.0;
-const cameraBaseDistance = 780;
+const cameraBaseDistance = 1100; // farther back to see wide map
 
 let orbitPhi = Math.PI / 2.6;
 let orbitTheta = Math.PI / 6;
 let orbitTarget = new THREE.Vector3(0, 0, 0);
 
-// depth scaling
-const Z_DEPTH_FACTOR = 4.5;
+// depth scaling – more pronounced depth
+const Z_DEPTH_FACTOR = 6.0;
 
 let isDragging = false;
 let lastMouseX = 0;
@@ -291,7 +291,7 @@ function init3DScene() {
   const starsGeometry = new THREE.BufferGeometry();
   const starCount = 2600;
   const positions = new Float32Array(starCount * 3);
-  const radius = 1400;
+  const radius = 1600;
 
   for (let i = 0; i < starCount; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
@@ -319,7 +319,7 @@ function init3DScene() {
 
   // Territory planets + faction rings
   const baseRadius = 12;    // base planet size
-  const spread = 3.8;       // a bit more spread so planets aren't cramped
+  const spread = 5.5;       // WIDER spread so planets are farther apart
 
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
