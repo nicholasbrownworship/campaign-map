@@ -2,34 +2,41 @@
 
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
+// Positions are now actual 3D coordinates (no 0–100 grid).
+// Rough layout:
+//  - Defenders: high "north", pushed backwards in Z
+//  - Raiders: bottom-left, pulled forwards in Z
+//  - Attackers: bottom-right, mid/back Z
+//  - Wild space: central with varied depths
 const TERRITORIES = [
-  // === DEFENDERS HOME REGION – "Bastior Reach" (top, back layer) ===
-  { id: "bastior_prime",   name: "Bastior Prime",   x: 50, y: 82, z: 40 },
-  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 42, y: 88, z: 45 },
-  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 58, y: 90, z: 50 },
+  // === DEFENDERS HOME REGION – "Bastior Reach" ===
+  { id: "bastior_prime",   name: "Bastior Prime",   x:   0, y:  240, z: -160 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: -90, y:  270, z: -110 },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x:  90, y:  270, z: -110 },
 
-  // === RAIDERS HOME REGION – "Harkanis Fringe" (bottom-left, front layer) ===
-  { id: "harkanis",        name: "Harkanis",        x: 22, y: 18, z: -35 },
-  { id: "emberhold",       name: "Emberhold",       x: 30, y: 16, z: -40 },
-  { id: "magnus_relay",    name: "Magnus Relay",    x: 26, y: 26, z: -30 },
+  // === RAIDERS HOME REGION – "Harkanis Fringe" ===
+  { id: "harkanis",        name: "Harkanis",        x: -270, y: -210, z: 160 },
+  { id: "emberhold",       name: "Emberhold",       x: -220, y: -270, z: 190 },
+  { id: "magnus_relay",    name: "Magnus Relay",    x: -220, y: -150, z: 120 },
 
-  // === ATTACKERS HOME REGION – "Karst Expanse" (bottom-right, mid-back) ===
-  { id: "karst_forge",     name: "Karst Forge",     x: 78, y: 18, z: 25 },
-  { id: "veldras_gate",    name: "Veldras Gate",    x: 86, y: 24, z: 30 },
-  { id: "kethrax_deep",    name: "Kethrax Deep",    x: 74, y: 26, z: 35 },
+  // === ATTACKERS HOME REGION – "Karst Expanse" ===
+  { id: "karst_forge",     name: "Karst Forge",     x:  270, y: -210, z: -40 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x:  330, y: -160, z: -10 },
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x:  230, y: -270, z: -90 },
 
-  // === WILD SPACE – central contested region (staggered depths) ===
-  { id: "voryn_crossing",  name: "Voryn Crossing",  x: 50, y: 60, z: 20 },
-  { id: "osiron_spur",     name: "Osiron Spur",     x: 38, y: 60, z: -5 },
-  { id: "duskfall_watch",  name: "Duskfall Watch",  x: 62, y: 64, z: 25 },
-  { id: "vorun_halo",      name: "Vorun Halo",      x: 70, y: 52, z: 30 },
-  { id: "cinder_wake",     name: "Cinder Wake",     x: 60, y: 44, z: 10 },
-  { id: "silas_gate",      name: "Silas Gate",      x: 40, y: 44, z: -20 },
-  { id: "threnos_void",    name: "Threnos Void",    x: 32, y: 52, z: -25 },
-  { id: "helios_spine",    name: "Helios Spine",    x: 54, y: 34, z: 5 },
-  { id: "nadir_outpost",   name: "Nadir Outpost",   x: 46, y: 40, z: -15 }
+  // === WILD SPACE – central contested region ===
+  { id: "voryn_crossing",  name: "Voryn Crossing",  x:    0, y:   60, z:   0 },
+  { id: "osiron_spur",     name: "Osiron Spur",     x: -150, y:   40, z:  60 },
+  { id: "duskfall_watch",  name: "Duskfall Watch",  x:  150, y:   90, z: -40 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x:  220, y:   20, z: -80 },
+  { id: "cinder_wake",     name: "Cinder Wake",     x:  110, y:  -70, z:  40 },
+  { id: "silas_gate",      name: "Silas Gate",      x: -130, y:  -50, z: 100 },
+  { id: "threnos_void",    name: "Threnos Void",    x: -200, y:    0, z:  80 },
+  { id: "helios_spine",    name: "Helios Spine",    x:   40, y: -130, z: -60 },
+  { id: "nadir_outpost",   name: "Nadir Outpost",   x:  -40, y:  -90, z:  30 }
 ];
 
+// Warp-lane graph stays as you defined it
 const WARP_LANES = [
   // === DEFENDER HOME – Bastior Reach (triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
@@ -46,7 +53,7 @@ const WARP_LANES = [
   ["veldras_gate",   "kethrax_deep"],
   ["kethrax_deep",   "karst_forge"],
 
-  // === Home → Wild connections (multiple paths for each team) ===
+  // === Home → Wild connections ===
   // Defenders into wild space
   ["bastior_prime",  "voryn_crossing"],
   ["trinaxis_minor", "osiron_spur"],
@@ -62,7 +69,7 @@ const WARP_LANES = [
   ["veldras_gate",   "duskfall_watch"],
   ["kethrax_deep",   "cinder_wake"],
 
-  // === Wild-space web (central contested region) ===
+  // === Wild-space web ===
   ["voryn_crossing", "duskfall_watch"],
   ["duskfall_watch", "vorun_halo"],
   ["vorun_halo",     "cinder_wake"],
@@ -79,29 +86,29 @@ const WARP_LANES = [
   ["cinder_wake",    "silas_gate"]
 ];
 
-// Base planet colors (distinct, no grey blobs)
+// Distinct planet base colors (identity)
 const PLANET_BASE_COLORS = {
-  bastior_prime:  0xffe08a, // warm sun-gold
-  trinaxis_minor: 0x7ad0ff, // bright blue
-  aurum_refuge:   0xcfff8a, // yellow-green
+  bastior_prime:  0xffe08a,
+  trinaxis_minor: 0x7ad0ff,
+  aurum_refuge:   0xcfff8a,
 
-  harkanis:       0xff6b6b, // hot red
-  emberhold:      0xff9b4d, // orange
-  magnus_relay:   0x9aa5ff, // periwinkle
+  harkanis:       0xff6b6b,
+  emberhold:      0xff9b4d,
+  magnus_relay:   0x9aa5ff,
 
-  karst_forge:    0xffc857, // amber
-  veldras_gate:   0xb57aff, // violet
-  kethrax_deep:   0x3ee6a3, // teal
+  karst_forge:    0xffc857,
+  veldras_gate:   0xb57aff,
+  kethrax_deep:   0x3ee6a3,
 
-  voryn_crossing: 0xfaf3ff, // pale lilac
-  osiron_spur:    0x8fb5ff, // sky blue
-  duskfall_watch: 0x5c6cff, // deep blue-purple
-  vorun_halo:     0xfff2b3, // pale yellow
-  cinder_wake:    0xd47a52, // burnt orange
-  silas_gate:     0x7ff5e3, // aqua
-  threnos_void:   0x394b7a, // indigo
-  helios_spine:   0xffdd9e, // soft gold
-  nadir_outpost:  0xa3b4c8  // steel blue
+  voryn_crossing: 0xfaf3ff,
+  osiron_spur:    0x8fb5ff,
+  duskfall_watch: 0x5c6cff,
+  vorun_halo:     0xfff2b3,
+  cinder_wake:    0xd47a52,
+  silas_gate:     0x7ff5e3,
+  threnos_void:   0x394b7a,
+  helios_spine:   0xffdd9e,
+  nadir_outpost:  0xa3b4c8
 };
 
 // Planet size factors (relative to base radius)
@@ -141,24 +148,21 @@ let selectedId = null;
 let scene, camera, renderer;
 let territoryMeshes = {};      // id -> planet mesh
 let factionRingMeshes = {};    // id -> ring mesh
+let warpLaneGroup;
 let animationFrameId = null;
 let mapViewportEl, canvasEl;
 let raycaster, pointer;
-let warpLaneGroup;
 
 // camera / orbit
-const DEFAULT_ZOOM = 0.8;     // slightly more zoomed out
+const DEFAULT_ZOOM = 1.0;         // overview by default
 let zoomFactor = DEFAULT_ZOOM;
-const MIN_ZOOM = 0.45;
+const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
-const cameraBaseDistance = 1100; // farther back to see wide map
+const cameraBaseDistance = 1400;
 
-let orbitPhi = Math.PI / 2.6;
-let orbitTheta = Math.PI / 6;
+let orbitPhi = Math.PI / 2.8;     // angle from "up" (Y-axis)
+let orbitTheta = Math.PI / 5;     // around the Y-axis
 let orbitTarget = new THREE.Vector3(0, 0, 0);
-
-// depth scaling – more pronounced depth
-const Z_DEPTH_FACTOR = 6.0;
 
 let isDragging = false;
 let lastMouseX = 0;
@@ -269,29 +273,29 @@ function init3DScene() {
 
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 4000);
+  camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 6000);
   updateCameraPosition();
 
   renderer = new THREE.WebGLRenderer({
     canvas: canvasEl,
     antialias: true,
-    alpha: true // let CSS background show through
+    alpha: true
   });
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
 
   // Lights
-  const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.9);
   scene.add(ambient);
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
-  dirLight.position.set(80, 120, 100);
+  dirLight.position.set(220, 260, 200);
   scene.add(dirLight);
 
   // Starfield
   const starsGeometry = new THREE.BufferGeometry();
   const starCount = 2600;
   const positions = new Float32Array(starCount * 3);
-  const radius = 1600;
+  const radius = 2200;
 
   for (let i = 0; i < starCount; i++) {
     const phi = Math.acos(2 * Math.random() - 1);
@@ -318,14 +322,9 @@ function init3DScene() {
   scene.add(starField);
 
   // Territory planets + faction rings
-  const baseRadius = 12;    // base planet size
-  const spread = 5.5;       // WIDER spread so planets are farther apart
+  const baseRadius = 14; // a bit bigger for readability
 
   TERRITORIES.forEach((t) => {
-    const x = (t.x - 50) * spread;
-    const y = (t.y - 50) * -spread;
-    const z = (t.z || 0) * Z_DEPTH_FACTOR;
-
     const sizeFactor = PLANET_SIZE_FACTORS[t.id] || 1.0;
     const planetRadius = baseRadius * sizeFactor;
 
@@ -338,15 +337,15 @@ function init3DScene() {
     });
 
     const mesh = new THREE.Mesh(geom, mat);
-    mesh.position.set(x, y, z);
+    mesh.position.set(t.x, t.y, t.z);
     mesh.userData.id = t.id;
 
     // Faction ring (ownership color only)
     const ringGeom = new THREE.TorusGeometry(
       planetRadius * 1.3,
-      planetRadius * 0.2,
-      16,
-      48
+      planetRadius * 0.22,
+      18,
+      60
     );
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -388,10 +387,11 @@ function buildWarpLanes() {
   }
   warpLaneGroup = new THREE.Group();
 
+  // BRIGHT and readable warp lanes
   const material = new THREE.LineBasicMaterial({
-    color: 0x64748b,
+    color: 0x38bdf8,
     transparent: true,
-    opacity: 0.75
+    opacity: 0.95
   });
 
   WARP_LANES.forEach(([aId, bId]) => {
@@ -521,7 +521,6 @@ function onWindowResize() {
 
 // ---------- VISUALS ----------
 
-// Make sure planet colors are bright & saturated, not muddy grey
 function makeVibrant(color, minL = 0.45, minS = 0.5) {
   const hsl = {};
   color.getHSL(hsl);
@@ -545,7 +544,7 @@ function applyTerritoryVisuals(id) {
 
   const control = state.control || 0;
 
-  // Planet: identity color only (ownership is ring)
+  // Planet: fixed identity color (ownership is ring)
   const color = planetBase.clone();
   makeVibrant(color);
   mesh.material.color.copy(color);
@@ -591,15 +590,6 @@ function applyTerritoryVisuals(id) {
     emissive = emissive.add(new THREE.Color(0x38bdf8).multiplyScalar(0.4));
   }
   mesh.material.emissive.copy(emissive);
-}
-
-function focusOnTerritory(id) {
-  const mesh = territoryMeshes[id];
-  if (!mesh) return;
-
-  orbitTarget.copy(mesh.position);
-  zoomFactor = Math.min(MAX_ZOOM, 1.8);
-  updateCameraPosition();
 }
 
 
@@ -831,7 +821,7 @@ function onSelectTerritory(id) {
   selectedId = id;
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
   renderSelection();
-  focusOnTerritory(id);
+  // NOTE: no auto-zoom on click anymore
 }
 
 function getTerritoryName(id) {
