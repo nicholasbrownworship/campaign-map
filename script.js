@@ -2,29 +2,27 @@
 
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
-// New hand-placed 3D coordinates: three distinct lobes + central wild space.
-// These are real 3D positions (no 0–100 grid) so the map has depth when you orbit.
 const TERRITORIES = [
-  // === DEFENDERS HOME REGION – Region 1 (angle 0°, radius 250) ===
-  // Center ≈ (250, 0, 60)
-  { id: "bastior_prime",   name: "Bastior Prime",   x: 250, y:   0,  z:  60 },
-  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: 210, y:  30, z:  60 },
-  { id: "aurum_refuge",    name: "Aurum Refuge",    x: 280, y: -35, z:  80 },
+  // === DEFENDERS HOME REGION – "Bastior Reach"
+  // Centered roughly above the core (angle ~90°, radius ≈ 260)
+  { id: "bastior_prime",   name: "Bastior Prime",   x:   0,  y: 260, z: -70 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: -55, y: 230, z: -40 },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x:  50, y: 295, z: -20 },
 
-  // === RAIDERS HOME REGION – Region 2 (angle 60°, radius 250) ===
-  // Center ≈ (125, 217, -60)
-  { id: "harkanis",        name: "Harkanis",        x: 125, y: 217, z: -60 },
-  { id: "emberhold",       name: "Emberhold",       x:  90, y: 242, z: -45 },
-  { id: "magnus_relay",    name: "Magnus Relay",    x: 155, y: 177, z: -70 },
+  // === RAIDERS HOME REGION – "Harkanis Fringe"
+  // Bottom-left, in front (angle ~210°, radius ≈ 260)
+  { id: "harkanis",        name: "Harkanis",        x: -225, y: -130, z:  70 },
+  { id: "emberhold",       name: "Emberhold",       x: -260, y: -190, z: 100 },
+  { id: "magnus_relay",    name: "Magnus Relay",    x: -190, y:  -80, z:  40 },
 
-  // === ATTACKERS HOME REGION – Region 3 (angle 120°, radius 250) ===
-  // Center ≈ (-125, 217, 50)
-  { id: "karst_forge",     name: "Karst Forge",     x: -125, y: 217, z:  50 },
-  { id: "veldras_gate",    name: "Veldras Gate",    x: -165, y: 247, z:  65 },
-  { id: "kethrax_deep",    name: "Kethrax Deep",    x:  -90, y: 185, z:  30 },
+  // === ATTACKERS HOME REGION – "Karst Expanse"
+  // Bottom-right, slightly back (angle ~330°, radius ≈ 260)
+  { id: "karst_forge",     name: "Karst Forge",     x:  225, y: -130, z: -10 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x:  275, y: -170, z:  20 },
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x:  190, y:  -80, z: -40 },
 
   // === WILD SPACE – central contested region ===
-  // One at origin, others with components between 20–100
+  // One at the exact origin, others with components roughly 20–110 apart
   { id: "voryn_crossing",  name: "Voryn Crossing",  x:   0,  y:   0,  z:   0 },
   { id: "osiron_spur",     name: "Osiron Spur",     x:  60, y:  30, z:  40 },
   { id: "duskfall_watch",  name: "Duskfall Watch",  x: -70, y:  25, z: -35 },
@@ -32,60 +30,68 @@ const TERRITORIES = [
   { id: "cinder_wake",     name: "Cinder Wake",     x: -55, y: -60, z: -45 },
   { id: "silas_gate",      name: "Silas Gate",      x:  80, y:  50, z: -20 },
   { id: "threnos_void",    name: "Threnos Void",    x: -90, y:  40, z:  70 },
-  { id: "helios_spine",    name: "Helios Spine",    x:  25, y: -70, z:  30 },
+  { id: "helios_spine",    name: "Helios Spine",    x:  10, y: -110, z: -40 },
   { id: "nadir_outpost",   name: "Nadir Outpost",   x: -40, y:  20, z: -80 }
 ];
 
-
-// Warp-lane graph
+// Warp lanes reworked to match these positions and keep the graph readable.
 const WARP_LANES = [
-  // === DEFENDER HOME – Bastior Reach (triangle) ===
+  // === DEFENDER HOME – Bastior Reach (tight triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
   ["trinaxis_minor", "aurum_refuge"],
   ["aurum_refuge",   "bastior_prime"],
 
-  // === RAIDER HOME – Harkanis Fringe (triangle) ===
+  // === RAIDER HOME – Harkanis Fringe (tight triangle) ===
   ["harkanis",       "emberhold"],
   ["emberhold",      "magnus_relay"],
   ["magnus_relay",   "harkanis"],
 
-  // === ATTACKER HOME – Karst Expanse (triangle) ===
+  // === ATTACKER HOME – Karst Expanse (tight triangle) ===
   ["karst_forge",    "veldras_gate"],
   ["veldras_gate",   "kethrax_deep"],
   ["kethrax_deep",   "karst_forge"],
 
-  // === Home → Wild connections ===
-  // Defenders into wild space
+  // === Home → Wild-space connections (each region has multiple gates) ===
+  // Defenders into wild space (top down toward the core)
   ["bastior_prime",  "voryn_crossing"],
-  ["trinaxis_minor", "osiron_spur"],
-  ["aurum_refuge",   "duskfall_watch"],
+  ["trinaxis_minor", "duskfall_watch"],
+  ["aurum_refuge",   "silas_gate"],
 
-  // Raiders into wild space
+  // Raiders into wild space (bottom-left up toward the core)
   ["harkanis",       "threnos_void"],
-  ["magnus_relay",   "silas_gate"],
+  ["magnus_relay",   "cinder_wake"],
   ["emberhold",      "nadir_outpost"],
 
-  // Attackers into wild space
+  // Attackers into wild space (bottom-right up toward the core)
   ["karst_forge",    "vorun_halo"],
   ["veldras_gate",   "duskfall_watch"],
-  ["kethrax_deep",   "cinder_wake"],
+  ["kethrax_deep",   "silas_gate"],
 
-  // === Wild-space web ===
+  // === Wild-space web – based on nearest neighbors so the routes feel natural ===
+  ["voryn_crossing", "osiron_spur"],
   ["voryn_crossing", "duskfall_watch"],
-  ["duskfall_watch", "vorun_halo"],
-  ["vorun_halo",     "cinder_wake"],
-  ["cinder_wake",    "helios_spine"],
-  ["helios_spine",   "silas_gate"],
-  ["silas_gate",     "threnos_void"],
-  ["threnos_void",   "osiron_spur"],
-  ["osiron_spur",    "voryn_crossing"],
-
-  // Extra cross-links
-  ["nadir_outpost",  "helios_spine"],
-  ["nadir_outpost",  "osiron_spur"],
   ["voryn_crossing", "nadir_outpost"],
-  ["cinder_wake",    "silas_gate"]
+  ["voryn_crossing", "silas_gate"],
+
+  ["osiron_spur",    "silas_gate"],
+  ["osiron_spur",    "threnos_void"],
+
+  ["duskfall_watch", "nadir_outpost"],
+  ["duskfall_watch", "cinder_wake"],
+
+  ["cinder_wake",    "helios_spine"],
+  ["cinder_wake",    "nadir_outpost"],
+
+  ["silas_gate",     "voryn_crossing"],
+
+  ["vorun_halo",     "helios_spine"],
+
+  ["helios_spine",   "cinder_wake"],
+
+  ["threnos_void",   "duskfall_watch"],
+  ["threnos_void",   "voryn_crossing"]
 ];
+
 
 // Distinct planet base colors (identity)
 const PLANET_BASE_COLORS = {
