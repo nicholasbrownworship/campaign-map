@@ -4,19 +4,16 @@ const STORAGE_KEY = "bastior_crusade_map_v1";
 
 const TERRITORIES = [
   // === DEFENDERS HOME REGION – "Bastior Reach"
-  // Main world at 0° around the origin, far “back”
   { id: "bastior_prime",   name: "Bastior Prime",   x:  780, y:    0, z: -820 },
   { id: "trinaxis_minor",  name: "Trinaxis Minor",  x:  855, y:  -86, z: -719 },
   { id: "aurum_refuge",    name: "Aurum Refuge",    x:  922, y: -107, z: -815 },
 
   // === RAIDERS HOME REGION – "Harkanis Fringe"
-  // Main world at 120°, far “front”
   { id: "harkanis",        name: "Harkanis",        x: -390, y:  676, z:  820 },
   { id: "emberhold",       name: "Emberhold",       x: -229, y:  598, z:  838 },
   { id: "magnus_relay",    name: "Magnus Relay",    x: -348, y:  857, z:  978 },
 
   // === ATTACKERS HOME REGION – "Karst Expanse"
-  // Main world at 240°, same radius as the others, back/low
   { id: "karst_forge",     name: "Karst Forge",     x: -390, y: -676, z: -820 },
   { id: "veldras_gate",    name: "Veldras Gate",    x: -285, y: -715, z: -726 },
   { id: "kethrax_deep",    name: "Kethrax Deep",    x: -306, y: -563, z: -666 },
@@ -178,7 +175,7 @@ let animationFrameId = null;
 let mapViewportEl, canvasEl;
 let raycaster, pointer;
 
-// camera / orbit
+// camera / orbit / pan
 const DEFAULT_ZOOM = 1.0;
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.5;
@@ -191,6 +188,7 @@ let orbitTheta = Math.PI / 4;     // 45° around Y axis
 let orbitTarget = new THREE.Vector3(0, 40, 0);
 
 let isDragging = false;
+let dragMode = null; // "rotate" or "pan"
 let lastMouseX = 0;
 let lastMouseY = 0;
 
@@ -405,6 +403,9 @@ function init3DScene() {
   window.addEventListener("pointerup", onPointerUp);
   canvasEl.addEventListener("wheel", onWheel, { passive: false });
 
+  // disable context menu so right-drag works cleanly
+  canvasEl.addEventListener("contextmenu", (e) => e.preventDefault());
+
   window.addEventListener("resize", onWindowResize);
 
   animate();
@@ -428,7 +429,6 @@ function buildWarpLanes() {
     const points = [aMesh.position.clone(), bMesh.position.clone()];
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-    // individual material so we can tweak opacity/color per lane
     const material = new THREE.LineBasicMaterial({
       color: baseColor,
       transparent: true,
@@ -471,7 +471,7 @@ function createPlanetLabels() {
 
 function createLabelSprite(text, radius = 20) {
   const canvas = document.createElement("canvas");
-  canvas.width = 1024; // higher res for crisper big labels
+  canvas.width = 1024; // high-res for crisp big labels
   canvas.height = 256;
 
   const ctx = canvas.getContext("2d");
@@ -480,8 +480,8 @@ function createLabelSprite(text, radius = 20) {
   const paddingX = 40;
   const paddingY = 18;
 
-  // Bigger font for readability
-  ctx.font = "64px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  ctx.font =
+    "64px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
   const metrics = ctx.measureText(text);
   const textWidth = metrics.width;
   const boxWidth = textWidth + paddingX * 2;
@@ -510,12 +510,12 @@ function createLabelSprite(text, radius = 20) {
     transparent: true,
     depthTest: false,
     depthWrite: false,
-    opacity: 0.5 // stronger by default; selection bumps further
+    opacity: 0.5 // base opacity; selection bumps this
   });
 
   const sprite = new THREE.Sprite(material);
 
-  // Larger on screen, still tied to planet size
+  // Larger on screen, scaled by planet size
   const scaleFactor = radius / 20;
   sprite.scale.set(220 * scaleFactor, 70 * scaleFactor, 1);
 
@@ -552,7 +552,7 @@ function animate() {
 }
 
 
-// ---------- CAMERA ORBIT / ZOOM ----------
+// ---------- CAMERA ORBIT / ZOOM / PAN ----------
 
 function updateCameraPosition() {
   const r = cameraBaseDistance / zoomFactor;
@@ -595,34 +595,69 @@ function onPointerDown(e) {
   if (!inside) return;
 
   if (e.button === 0) {
+    // left button = rotate + pick
     isDragging = true;
+    dragMode = "rotate";
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
 
     handlePick(e.clientX, e.clientY, rect);
+  } else if (e.button === 2) {
+    // right button = pan
+    isDragging = true;
+    dragMode = "pan";
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
   }
 }
 
 function onPointerMove(e) {
-  if (!isDragging) return;
+  if (!isDragging || !dragMode) return;
 
   const dx = e.clientX - lastMouseX;
   const dy = e.clientY - lastMouseY;
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
 
-  const ROT_SPEED = 0.003;
-  orbitTheta -= dx * ROT_SPEED;
-  orbitPhi -= dy * ROT_SPEED;
+  if (dragMode === "rotate") {
+    const ROT_SPEED = 0.003;
+    orbitTheta -= dx * ROT_SPEED;
+    orbitPhi -= dy * ROT_SPEED;
 
-  const EPS = 0.12;
-  orbitPhi = Math.max(EPS, Math.min(Math.PI - EPS, orbitPhi));
+    const EPS = 0.12;
+    orbitPhi = Math.max(EPS, Math.min(Math.PI - EPS, orbitPhi));
 
-  updateCameraPosition();
+    updateCameraPosition();
+  } else if (dragMode === "pan") {
+    // pan the orbitTarget based on camera orientation
+    const height = mapViewportEl.clientHeight || 300;
+    const panSpeed = (cameraBaseDistance / zoomFactor) / height * 1.2;
+
+    // Negative dx = move target left in screen space
+    const moveX = -dx * panSpeed;
+    const moveY = dy * panSpeed;
+
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward); // points from camera to scene
+
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, camera.up).normalize();
+
+    const up = new THREE.Vector3();
+    up.copy(camera.up).normalize();
+
+    const panOffset = new THREE.Vector3();
+    panOffset.addScaledVector(right, moveX);
+    panOffset.addScaledVector(up, moveY);
+
+    orbitTarget.add(panOffset);
+    updateCameraPosition();
+  }
 }
 
 function onPointerUp() {
   isDragging = false;
+  dragMode = null;
 }
 
 function handlePick(clientX, clientY, rect) {
