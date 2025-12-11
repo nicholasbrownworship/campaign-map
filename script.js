@@ -345,7 +345,7 @@ function init3DScene() {
   scene.add(starField);
 
   // Territory planets + faction rings
-  const baseRadius = 14; // bigger for readability
+  const baseRadius = 22; // bigger for readability
 
   TERRITORIES.forEach((t) => {
     const sizeFactor = PLANET_SIZE_FACTORS[t.id] || 1.0;
