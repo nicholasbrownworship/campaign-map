@@ -2,41 +2,37 @@
 
 const STORAGE_KEY = "bastior_crusade_map_v1";
 
-// Positions are now actual 3D coordinates (no 0–100 grid).
-// Rough layout:
-//  - Defenders: high "north", pushed backwards in Z
-//  - Raiders: bottom-left, pulled forwards in Z
-//  - Attackers: bottom-right, mid/back Z
-//  - Wild space: central with varied depths
+// New hand-placed 3D coordinates: three distinct lobes + central wild space.
+// These are real 3D positions (no 0–100 grid) so the map has depth when you orbit.
 const TERRITORIES = [
-  // === DEFENDERS HOME REGION – "Bastior Reach" ===
-  { id: "bastior_prime",   name: "Bastior Prime",   x:   0, y:  240, z: -160 },
-  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: -90, y:  270, z: -110 },
-  { id: "aurum_refuge",    name: "Aurum Refuge",    x:  90, y:  270, z: -110 },
+  // === DEFENDERS HOME REGION – "Bastior Reach" (upper, back-left) ===
+  { id: "bastior_prime",   name: "Bastior Prime",   x: -40,  y: 180, z: -140 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: -140, y: 210, z: -80  },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x:  60,  y: 220, z: -90  },
 
-  // === RAIDERS HOME REGION – "Harkanis Fringe" ===
-  { id: "harkanis",        name: "Harkanis",        x: -270, y: -210, z: 160 },
-  { id: "emberhold",       name: "Emberhold",       x: -220, y: -270, z: 190 },
-  { id: "magnus_relay",    name: "Magnus Relay",    x: -220, y: -150, z: 120 },
+  // === RAIDERS HOME REGION – "Harkanis Fringe" (lower-left, in front) ===
+  { id: "harkanis",        name: "Harkanis",        x: -240, y: -120, z: 120 },
+  { id: "emberhold",       name: "Emberhold",       x: -280, y: -180, z: 180 },
+  { id: "magnus_relay",    name: "Magnus Relay",    x: -190, y:  -60, z:  60 },
 
-  // === ATTACKERS HOME REGION – "Karst Expanse" ===
-  { id: "karst_forge",     name: "Karst Forge",     x:  270, y: -210, z: -40 },
-  { id: "veldras_gate",    name: "Veldras Gate",    x:  330, y: -160, z: -10 },
-  { id: "kethrax_deep",    name: "Kethrax Deep",    x:  230, y: -270, z: -90 },
+  // === ATTACKERS HOME REGION – "Karst Expanse" (lower-right, back) ===
+  { id: "karst_forge",     name: "Karst Forge",     x:  240, y: -110, z: -80 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x:  300, y: -160, z: -20 },
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x:  210, y:  -60, z: -150 },
 
-  // === WILD SPACE – central contested region ===
-  { id: "voryn_crossing",  name: "Voryn Crossing",  x:    0, y:   60, z:   0 },
-  { id: "osiron_spur",     name: "Osiron Spur",     x: -150, y:   40, z:  60 },
-  { id: "duskfall_watch",  name: "Duskfall Watch",  x:  150, y:   90, z: -40 },
-  { id: "vorun_halo",      name: "Vorun Halo",      x:  220, y:   20, z: -80 },
-  { id: "cinder_wake",     name: "Cinder Wake",     x:  110, y:  -70, z:  40 },
-  { id: "silas_gate",      name: "Silas Gate",      x: -130, y:  -50, z: 100 },
-  { id: "threnos_void",    name: "Threnos Void",    x: -200, y:    0, z:  80 },
-  { id: "helios_spine",    name: "Helios Spine",    x:   40, y: -130, z: -60 },
-  { id: "nadir_outpost",   name: "Nadir Outpost",   x:  -40, y:  -90, z:  30 }
+  // === WILD SPACE – central contested region (around origin, staggered depths) ===
+  { id: "voryn_crossing",  name: "Voryn Crossing",  x:    0, y:   40, z:   0 },
+  { id: "osiron_spur",     name: "Osiron Spur",     x: -140, y:   40, z:  40 },
+  { id: "duskfall_watch",  name: "Duskfall Watch",  x:  130, y:   70, z: -30 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x:  200, y:   10, z: -90 },
+  { id: "cinder_wake",     name: "Cinder Wake",     x:   80, y:  -40, z:  50 },
+  { id: "silas_gate",      name: "Silas Gate",      x: -130, y:  -30, z: 100 },
+  { id: "threnos_void",    name: "Threnos Void",    x: -200, y:   10, z:  70 },
+  { id: "helios_spine",    name: "Helios Spine",    x:   20, y:  -90, z: -50 },
+  { id: "nadir_outpost",   name: "Nadir Outpost",   x:  -40, y:  -40, z:  10 }
 ];
 
-// Warp-lane graph stays as you defined it
+// Warp-lane graph
 const WARP_LANES = [
   // === DEFENDER HOME – Bastior Reach (triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
@@ -158,11 +154,12 @@ const DEFAULT_ZOOM = 1.0;         // overview by default
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
-const cameraBaseDistance = 1400;
+const cameraBaseDistance = 1350;
 
-let orbitPhi = Math.PI / 2.8;     // angle from "up" (Y-axis)
-let orbitTheta = Math.PI / 5;     // around the Y-axis
-let orbitTarget = new THREE.Vector3(0, 0, 0);
+// Slightly off-axis so you see the triangle of regions & depth
+let orbitPhi = Math.PI / 3;       // ~60° down from "north"
+let orbitTheta = Math.PI / 4;     // 45° around Y axis
+let orbitTarget = new THREE.Vector3(0, 40, 0);
 
 let isDragging = false;
 let lastMouseX = 0;
@@ -322,7 +319,7 @@ function init3DScene() {
   scene.add(starField);
 
   // Territory planets + faction rings
-  const baseRadius = 14; // a bit bigger for readability
+  const baseRadius = 14; // bigger for readability
 
   TERRITORIES.forEach((t) => {
     const sizeFactor = PLANET_SIZE_FACTORS[t.id] || 1.0;
@@ -387,11 +384,12 @@ function buildWarpLanes() {
   }
   warpLaneGroup = new THREE.Group();
 
-  // BRIGHT and readable warp lanes
+  // Bright and clearly visible warp lanes
   const material = new THREE.LineBasicMaterial({
     color: 0x38bdf8,
     transparent: true,
-    opacity: 0.95
+    opacity: 0.95,
+    linewidth: 3 // note: linewidth is mostly ignored in WebGL but we keep it for intent
   });
 
   WARP_LANES.forEach(([aId, bId]) => {
@@ -821,7 +819,7 @@ function onSelectTerritory(id) {
   selectedId = id;
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
   renderSelection();
-  // NOTE: no auto-zoom on click anymore
+  // intentionally NO auto-zoom here
 }
 
 function getTerritoryName(id) {
@@ -909,7 +907,7 @@ function resetState() {
   saveState();
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
 
-  orbitTarget.set(0, 0, 0);
+  orbitTarget.set(0, 40, 0);
   zoomFactor = DEFAULT_ZOOM;
   updateCameraPosition();
 
