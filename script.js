@@ -30,7 +30,6 @@ const TERRITORIES = [
   { id: "nadir_outpost",   name: "Nadir Outpost",   x: 46, y: 40, z: -15 }
 ];
 
-// Simple warp-lane graph between worlds
 const WARP_LANES = [
   // === DEFENDER HOME – Bastior Reach (triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
@@ -108,27 +107,27 @@ const PLANET_BASE_COLORS = {
 
 // Planet size factors (relative to base radius)
 const PLANET_SIZE_FACTORS = {
-  bastior_prime:  1.5,
-  trinaxis_minor: 1.2,
-  aurum_refuge:   1.2,
+  bastior_prime:  1.6,
+  trinaxis_minor: 1.3,
+  aurum_refuge:   1.3,
 
-  harkanis:       1.4,
-  emberhold:      1.1,
-  magnus_relay:   1.1,
+  harkanis:       1.5,
+  emberhold:      1.2,
+  magnus_relay:   1.2,
 
-  karst_forge:    1.4,
-  veldras_gate:   1.2,
-  kethrax_deep:   1.2,
+  karst_forge:    1.5,
+  veldras_gate:   1.3,
+  kethrax_deep:   1.3,
 
-  voryn_crossing: 1.1,
-  osiron_spur:    1.0,
-  duskfall_watch: 1.0,
-  vorun_halo:     1.0,
-  cinder_wake:    0.9,
-  silas_gate:     0.9,
-  threnos_void:   0.9,
-  helios_spine:   1.0,
-  nadir_outpost:  0.9
+  voryn_crossing: 1.2,
+  osiron_spur:    1.1,
+  duskfall_watch: 1.1,
+  vorun_halo:     1.1,
+  cinder_wake:    1.0,
+  silas_gate:     1.0,
+  threnos_void:   1.0,
+  helios_spine:   1.1,
+  nadir_outpost:  1.0
 };
 
 
@@ -149,19 +148,18 @@ let raycaster, pointer;
 let warpLaneGroup;
 
 // camera / orbit
-const DEFAULT_ZOOM = 0.7;
+const DEFAULT_ZOOM = 0.6;        // more zoomed out to see more of the map
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.45;
 const MAX_ZOOM = 2.0;
-// farther base distance so we still see most of the map with deeper Z
-const cameraBaseDistance = 700;
+const cameraBaseDistance = 750;  // farther back camera for overview
 
-let orbitPhi = Math.PI / 3;
+let orbitPhi = Math.PI / 2.6;    // slightly more side-on
 let orbitTheta = Math.PI / 6;
 let orbitTarget = new THREE.Vector3(0, 0, 0);
 
-// depth scaling – stronger 3D separation
-const Z_DEPTH_FACTOR = 6;
+// depth scaling – still 3D, but pulled in a bit
+const Z_DEPTH_FACTOR = 4.5;
 
 let isDragging = false;
 let lastMouseX = 0;
@@ -321,12 +319,13 @@ function init3DScene() {
   scene.add(starField);
 
   // Territory planets + faction rings
-  const baseRadius = 10;    // bigger base planet size
-  const spread = 3.8;       // horizontal/vertical spread
+  const baseRadius = 12;    // bigger base planet size for easier clicking
+  const spread = 3.0;       // smaller spread so the map is tighter / easier to see
+
   TERRITORIES.forEach((t) => {
     const x = (t.x - 50) * spread;
     const y = (t.y - 50) * -spread;
-    const z = (t.z || 0) * Z_DEPTH_FACTOR; // Z now uses much larger raw values
+    const z = (t.z || 0) * Z_DEPTH_FACTOR;
 
     const sizeFactor = PLANET_SIZE_FACTORS[t.id] || 1.0;
     const planetRadius = baseRadius * sizeFactor;
@@ -445,10 +444,11 @@ function updateCameraPosition() {
 
 function onWheel(e) {
   e.preventDefault();
+  // gentler zoom steps so it’s not jumpy
   if (e.deltaY < 0) {
-    zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.1);
+    zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.07);
   } else {
-    zoomFactor = Math.max(MIN_ZOOM, zoomFactor / 1.1);
+    zoomFactor = Math.max(MIN_ZOOM, zoomFactor / 1.07);
   }
   updateCameraPosition();
 }
@@ -468,6 +468,7 @@ function onPointerDown(e) {
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
 
+    // pick on mouse down
     handlePick(e.clientX, e.clientY, rect);
   }
 }
@@ -480,7 +481,7 @@ function onPointerMove(e) {
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
 
-  const ROT_SPEED = 0.005;
+  const ROT_SPEED = 0.003; // slower rotation for better control
   orbitTheta -= dx * ROT_SPEED;
   orbitPhi -= dy * ROT_SPEED;
 
@@ -523,7 +524,6 @@ function onWindowResize() {
 
 // ---------- VISUALS ----------
 
-// Ensure color never gets too dark
 function ensureMinBrightness(color, minL = 0.4) {
   const hsl = {};
   color.getHSL(hsl);
@@ -595,13 +595,12 @@ function applyTerritoryVisuals(id) {
   mesh.material.emissive.copy(emissive);
 }
 
-// Center and zoom on a specific territory
 function focusOnTerritory(id) {
   const mesh = territoryMeshes[id];
   if (!mesh) return;
 
   orbitTarget.copy(mesh.position);
-  zoomFactor = Math.min(MAX_ZOOM, 1.9);
+  zoomFactor = Math.min(MAX_ZOOM, 1.8);
   updateCameraPosition();
 }
 
@@ -612,14 +611,14 @@ function hookEvents() {
   document
     .getElementById("zoomInBtn")
     .addEventListener("click", () => {
-      zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.15);
+      zoomFactor = Math.min(MAX_ZOOM, zoomFactor * 1.07);
       updateCameraPosition();
     });
 
   document
     .getElementById("zoomOutBtn")
     .addEventListener("click", () => {
-      zoomFactor = Math.max(MIN_ZOOM, zoomFactor / 1.15);
+      zoomFactor = Math.max(MIN_ZOOM, zoomFactor / 1.07);
       updateCameraPosition();
     });
 
