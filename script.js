@@ -34,62 +34,66 @@ const TERRITORIES = [
 ];
 
 
-// Warp lanes reworked to match these positions and keep the graph readable.
 const WARP_LANES = [
-  // === DEFENDER HOME – Bastior Reach (tight triangle) ===
+  // === DEFENDER HOME – Bastior Reach (triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
   ["trinaxis_minor", "aurum_refuge"],
   ["aurum_refuge",   "bastior_prime"],
 
-  // === RAIDER HOME – Harkanis Fringe (tight triangle) ===
+  // === RAIDER HOME – Harkanis Fringe (triangle) ===
   ["harkanis",       "emberhold"],
   ["emberhold",      "magnus_relay"],
   ["magnus_relay",   "harkanis"],
 
-  // === ATTACKER HOME – Karst Expanse (tight triangle) ===
+  // === ATTACKER HOME – Karst Expanse (triangle) ===
   ["karst_forge",    "veldras_gate"],
   ["veldras_gate",   "kethrax_deep"],
   ["kethrax_deep",   "karst_forge"],
 
-  // === Home → Wild-space connections (each region has multiple gates) ===
-  // Defenders into wild space (top down toward the core)
-  ["bastior_prime",  "voryn_crossing"],
-  ["trinaxis_minor", "duskfall_watch"],
-  ["aurum_refuge",   "silas_gate"],
+  // === Home → Wild-space connections (closest sensible gates) ===
 
-  // Raiders into wild space (bottom-left up toward the core)
-  ["harkanis",       "threnos_void"],
-  ["magnus_relay",   "cinder_wake"],
+  // Defenders drop into wild space via the “upper / back” side
+  ["bastior_prime",  "duskfall_watch"],   // forward toward the core
+  ["trinaxis_minor", "silas_gate"],       // diagonal toward high-Y wild
+  ["aurum_refuge",   "voryn_crossing"],   // direct line to the true center
+
+  // Raiders come down into the wild cluster near the high-Y worlds
+  ["harkanis",       "nadir_outpost"],    // high-Y, similar Z
   ["emberhold",      "nadir_outpost"],
+  ["magnus_relay",   "silas_gate"],       // high-Y, slightly “behind” the front
 
-  // Attackers into wild space (bottom-right up toward the core)
-  ["karst_forge",    "vorun_halo"],
-  ["veldras_gate",   "duskfall_watch"],
-  ["kethrax_deep",   "silas_gate"],
+  // Attackers rise into wild space via the low-Y side
+  ["karst_forge",    "helios_spine"],     // closest low-Y wild world
+  ["veldras_gate",   "osiron_spur"],      // slants up toward the core
+  ["kethrax_deep",   "threnos_void"],     // similar X/Z, mid-depth
 
-  // === Wild-space web – based on nearest neighbors so the routes feel natural ===
+  // === Wild-space web – 3D routes around the core ===
+
+  // Core hub around Voryn
   ["voryn_crossing", "osiron_spur"],
   ["voryn_crossing", "duskfall_watch"],
-  ["voryn_crossing", "nadir_outpost"],
-  ["voryn_crossing", "silas_gate"],
+  ["voryn_crossing", "cinder_wake"],
 
-  ["osiron_spur",    "silas_gate"],
+  // Lower wild cluster
   ["osiron_spur",    "threnos_void"],
-
-  ["duskfall_watch", "nadir_outpost"],
-  ["duskfall_watch", "cinder_wake"],
-
-  ["cinder_wake",    "helios_spine"],
-  ["cinder_wake",    "nadir_outpost"],
-
-  ["silas_gate",     "voryn_crossing"],
-
-  ["vorun_halo",     "helios_spine"],
-
+  ["osiron_spur",    "helios_spine"],
   ["helios_spine",   "cinder_wake"],
 
-  ["threnos_void",   "duskfall_watch"],
-  ["threnos_void",   "voryn_crossing"]
+  // Mid / upper wild cluster
+  ["duskfall_watch", "silas_gate"],
+  ["duskfall_watch", "cinder_wake"],
+  ["silas_gate",     "nadir_outpost"],
+  ["cinder_wake",    "threnos_void"],
+
+  // Side / deep wild links
+  ["vorun_halo",     "osiron_spur"],
+  ["vorun_halo",     "cinder_wake"],
+  ["threnos_void",   "vorun_halo"],
+  ["threnos_void",   "voryn_crossing"],
+
+  // High-Y wild outpost
+  ["nadir_outpost",  "silas_gate"],
+  ["nadir_outpost",  "harkanis"]          // also a home-region shortcut
 ];
 
 
