@@ -471,27 +471,28 @@ function createPlanetLabels() {
 
 function createLabelSprite(text, radius = 20) {
   const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 128;
+  canvas.width = 1024; // higher res for crisper big labels
+  canvas.height = 256;
 
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const paddingX = 24;
-  const paddingY = 12;
+  const paddingX = 40;
+  const paddingY = 18;
 
-  ctx.font = "32px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  // Bigger font for readability
+  ctx.font = "64px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
   const metrics = ctx.measureText(text);
   const textWidth = metrics.width;
   const boxWidth = textWidth + paddingX * 2;
-  const boxHeight = 56;
+  const boxHeight = 96;
 
   const x = (canvas.width - boxWidth) / 2;
   const y = (canvas.height - boxHeight) / 2;
 
   // background
   ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-  const r = 16;
+  const r = 24;
   roundedRect(ctx, x, y, boxWidth, boxHeight, r);
   ctx.fill();
 
@@ -509,14 +510,14 @@ function createLabelSprite(text, radius = 20) {
     transparent: true,
     depthTest: false,
     depthWrite: false,
-    opacity: 0.3 // faint by default; selection will bump this
+    opacity: 0.5 // stronger by default; selection bumps further
   });
 
   const sprite = new THREE.Sprite(material);
 
-  // Scale label relative to planet size
+  // Larger on screen, still tied to planet size
   const scaleFactor = radius / 20;
-  sprite.scale.set(80 * scaleFactor, 20 * scaleFactor, 1);
+  sprite.scale.set(220 * scaleFactor, 70 * scaleFactor, 1);
 
   return sprite;
 }
@@ -749,9 +750,9 @@ function highlightConnections(planetId) {
 }
 
 function updateLabelHighlights(selectedPlanetId) {
-  // Faint labels by default
+  // Faint-ish labels by default
   Object.values(planetLabelSprites).forEach((sprite) => {
-    sprite.material.opacity = 0.25;
+    sprite.material.opacity = 0.35;
   });
 
   if (!selectedPlanetId) return;
