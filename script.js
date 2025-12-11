@@ -100,7 +100,7 @@ const WARP_LANES = [
   ["nadir_outpost",  "harkanis"]
 ];
 
-// Distinct planet base colors (identity) – unchanged
+// Distinct planet base colors (identity)
 const PLANET_BASE_COLORS = {
   bastior_prime:  0xffe08a,
   trinaxis_minor: 0x7ad0ff,
@@ -126,9 +126,6 @@ const PLANET_BASE_COLORS = {
 };
 
 // Planet size factors (relative to base radius)
-// - Home worlds = biggest in their 3-planet region
-// - Several wild-space worlds are MUCH larger overall
-// - Some outposts are quite small for contrast
 const PLANET_SIZE_FACTORS = {
   // Bastior Reach – Defenders (home largest)
   bastior_prime:  2.4,
@@ -170,13 +167,19 @@ let selectedId = null;
 let scene, camera, renderer;
 let territoryMeshes = {};      // id -> planet mesh
 let factionRingMeshes = {};    // id -> ring mesh
+
 let warpLaneGroup;
+let laneMeshes = [];           // all lane meshes
+let lanesByPlanet = {};        // id -> lane meshes touching that planet
+
+let planetLabelSprites = {};   // id -> label sprite above each planet
+
 let animationFrameId = null;
 let mapViewportEl, canvasEl;
 let raycaster, pointer;
 
 // camera / orbit
-const DEFAULT_ZOOM = 1.0;         // overview by default
+const DEFAULT_ZOOM = 1.0;
 let zoomFactor = DEFAULT_ZOOM;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
@@ -345,7 +348,7 @@ function init3DScene() {
   scene.add(starField);
 
   // Territory planets + faction rings
-  const baseRadius = 22; // bigger for readability
+  const baseRadius = 22;
 
   TERRITORIES.forEach((t) => {
     const sizeFactor = PLANET_SIZE_FACTORS[t.id] || 1.0;
@@ -386,8 +389,11 @@ function init3DScene() {
     applyTerritoryVisuals(t.id);
   });
 
-  // Warp lanes
+  // Warp lanes (ghosted by default)
   buildWarpLanes();
+
+  // Planet labels
+  createPlanetLabels();
 
   // Raycaster
   raycaster = new THREE.Raycaster();
@@ -409,14 +415,10 @@ function buildWarpLanes() {
     scene.remove(warpLaneGroup);
   }
   warpLaneGroup = new THREE.Group();
+  laneMeshes = [];
+  lanesByPlanet = {};
 
-  // Bright and clearly visible warp lanes
-  const material = new THREE.LineBasicMaterial({
-    color: 0x38bdf8,
-    transparent: true,
-    opacity: 0.95,
-    linewidth: 3 // note: linewidth is mostly ignored in WebGL but we keep it for intent
-  });
+  const baseColor = 0x38bdf8;
 
   WARP_LANES.forEach(([aId, bId]) => {
     const aMesh = territoryMeshes[aId];
@@ -425,11 +427,117 @@ function buildWarpLanes() {
 
     const points = [aMesh.position.clone(), bMesh.position.clone()];
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+    // individual material so we can tweak opacity/color per lane
+    const material = new THREE.LineBasicMaterial({
+      color: baseColor,
+      transparent: true,
+      opacity: 0.08 // very faint by default
+    });
+
     const line = new THREE.Line(geometry, material);
+    line.userData = { fromId: aId, toId: bId };
+
     warpLaneGroup.add(line);
+    laneMeshes.push(line);
+
+    if (!lanesByPlanet[aId]) lanesByPlanet[aId] = [];
+    if (!lanesByPlanet[bId]) lanesByPlanet[bId] = [];
+    lanesByPlanet[aId].push(line);
+    lanesByPlanet[bId].push(line);
   });
 
   scene.add(warpLaneGroup);
+}
+
+function createPlanetLabels() {
+  TERRITORIES.forEach((t) => {
+    const mesh = territoryMeshes[t.id];
+    if (!mesh) return;
+
+    const radius =
+      (mesh.geometry && mesh.geometry.parameters && mesh.geometry.parameters.radius) ||
+      20;
+
+    const sprite = createLabelSprite(t.name, radius);
+    sprite.position.set(0, radius + 8, 0);
+    mesh.add(sprite);
+
+    planetLabelSprites[t.id] = sprite;
+  });
+
+  updateLabelHighlights(null);
+}
+
+function createLabelSprite(text, radius = 20) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 128;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const paddingX = 24;
+  const paddingY = 12;
+
+  ctx.font = "32px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  const metrics = ctx.measureText(text);
+  const textWidth = metrics.width;
+  const boxWidth = textWidth + paddingX * 2;
+  const boxHeight = 56;
+
+  const x = (canvas.width - boxWidth) / 2;
+  const y = (canvas.height - boxHeight) / 2;
+
+  // background
+  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+  const r = 16;
+  roundedRect(ctx, x, y, boxWidth, boxHeight, r);
+  ctx.fill();
+
+  // text
+  ctx.fillStyle = "#f5f5f5";
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    opacity: 0.3 // faint by default; selection will bump this
+  });
+
+  const sprite = new THREE.Sprite(material);
+
+  // Scale label relative to planet size
+  const scaleFactor = radius / 20;
+  sprite.scale.set(80 * scaleFactor, 20 * scaleFactor, 1);
+
+  return sprite;
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - radius,
+    y + height
+  );
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
 }
 
 function animate() {
@@ -530,6 +638,13 @@ function handlePick(clientX, clientY, rect) {
     const mesh = intersects[0].object;
     const id = mesh.userData.id;
     if (id) onSelectTerritory(id);
+  } else {
+    // clicked empty space: clear selection
+    selectedId = null;
+    TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
+    highlightConnections(null);
+    updateLabelHighlights(null);
+    renderSelection();
   }
 }
 
@@ -614,6 +729,49 @@ function applyTerritoryVisuals(id) {
     emissive = emissive.add(new THREE.Color(0x38bdf8).multiplyScalar(0.4));
   }
   mesh.material.emissive.copy(emissive);
+}
+
+function highlightConnections(planetId) {
+  // Reset all lanes to ghosted
+  laneMeshes.forEach((lane) => {
+    lane.material.color.setHex(0x38bdf8);
+    lane.material.opacity = 0.08;
+  });
+
+  if (!planetId || !lanesByPlanet[planetId]) return;
+
+  const connectedLanes = lanesByPlanet[planetId];
+
+  connectedLanes.forEach((lane) => {
+    lane.material.color.setHex(0x00ffff);
+    lane.material.opacity = 0.9;
+  });
+}
+
+function updateLabelHighlights(selectedPlanetId) {
+  // Faint labels by default
+  Object.values(planetLabelSprites).forEach((sprite) => {
+    sprite.material.opacity = 0.25;
+  });
+
+  if (!selectedPlanetId) return;
+
+  // Selected planet label fully visible
+  const selectedSprite = planetLabelSprites[selectedPlanetId];
+  if (selectedSprite) {
+    selectedSprite.material.opacity = 1.0;
+  }
+
+  // Neighbor labels mostly visible
+  const connectedLanes = lanesByPlanet[selectedPlanetId] || [];
+  connectedLanes.forEach((lane) => {
+    const { fromId, toId } = lane.userData;
+    const otherId = fromId === selectedPlanetId ? toId : fromId;
+    const otherSprite = planetLabelSprites[otherId];
+    if (otherSprite) {
+      otherSprite.material.opacity = 0.9;
+    }
+  });
 }
 
 
@@ -844,8 +1002,9 @@ function log(text) {
 function onSelectTerritory(id) {
   selectedId = id;
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
+  highlightConnections(id);
+  updateLabelHighlights(id);
   renderSelection();
-  // intentionally NO auto-zoom here
 }
 
 function getTerritoryName(id) {
@@ -892,6 +1051,8 @@ function resolveBattle(territoryId, defenderFaction, attackerFaction, winner) {
 
   saveState();
   applyTerritoryVisuals(territoryId);
+  highlightConnections(territoryId);
+  updateLabelHighlights(territoryId);
   renderSelection();
   updateFactionOverview();
 
@@ -920,6 +1081,8 @@ function advanceTurn() {
   saveState();
   renderTurn();
   TERRITORIES.forEach((t) => applyTerritoryVisuals(t.id));
+  highlightConnections(selectedId);
+  updateLabelHighlights(selectedId);
   renderLog();
 }
 
@@ -936,6 +1099,9 @@ function resetState() {
   orbitTarget.set(0, 40, 0);
   zoomFactor = DEFAULT_ZOOM;
   updateCameraPosition();
+
+  highlightConnections(null);
+  updateLabelHighlights(null);
 
   renderAll();
 }
