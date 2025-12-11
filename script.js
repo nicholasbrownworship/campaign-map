@@ -127,34 +127,36 @@ const PLANET_BASE_COLORS = {
 
 // Planet size factors (relative to base radius)
 // - Home worlds = biggest in their 3-planet region
-// - Several wild-space worlds are even larger overall
+// - Several wild-space worlds are MUCH larger overall
+// - Some outposts are quite small for contrast
 const PLANET_SIZE_FACTORS = {
   // Bastior Reach – Defenders (home largest)
-  bastior_prime:  1.8,
-  trinaxis_minor: 1.3,
-  aurum_refuge:   1.4,
+  bastior_prime:  2.4,
+  trinaxis_minor: 1.4,
+  aurum_refuge:   1.8,
 
   // Harkanis Fringe – Raiders (home largest)
-  harkanis:       1.7,
+  harkanis:       2.2,
   emberhold:      1.3,
-  magnus_relay:   1.2,
+  magnus_relay:   1.0,
 
   // Karst Expanse – Attackers (home largest)
-  karst_forge:    1.7,
-  veldras_gate:   1.3,
-  kethrax_deep:   1.4,
+  karst_forge:    2.3,
+  veldras_gate:   1.5,
+  kethrax_deep:   1.7,
 
-  // Wild space – mix of sizes, some bigger than home worlds
-  voryn_crossing: 2.0, // massive central hub
-  osiron_spur:    1.4,
-  duskfall_watch: 1.8, // big forward wild-space anchor
-  vorun_halo:     1.5,
-  cinder_wake:    1.3,
-  silas_gate:     1.4,
-  threnos_void:   1.5,
-  helios_spine:   1.9, // huge “spine” world
-  nadir_outpost:  1.2
+  // Wild space – big variance, some giants
+  voryn_crossing: 3.0, // massive central hub
+  osiron_spur:    1.6,
+  duskfall_watch: 2.6, // big forward wild-space anchor
+  vorun_halo:     1.9,
+  cinder_wake:    1.2,
+  silas_gate:     1.7,
+  threnos_void:   2.0,
+  helios_spine:   3.2, // huge “spine” world
+  nadir_outpost:  1.1  // small high-Y outpost
 };
+
 
 
 // ---------- STATE ----------
