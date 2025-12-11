@@ -4,31 +4,32 @@ const STORAGE_KEY = "bastior_crusade_map_v1";
 
 const TERRITORIES = [
   // === DEFENDERS HOME REGION – "Bastior Reach" (top, far back) ===
-  { id: "bastior_prime",   name: "Bastior Prime",   x:   0,  y: 260, z: -820 },
-  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: -55, y: 230, z: -900 },
-  { id: "aurum_refuge",    name: "Aurum Refuge",    x:  50, y: 295, z: -740 },
+  { id: "bastior_prime",   name: "Bastior Prime",   x:   0,  y: 351, z: -787 },
+  { id: "trinaxis_minor",  name: "Trinaxis Minor",  x: -74, y: 310, z: -864 },
+  { id: "aurum_refuge",    name: "Aurum Refuge",    x:  68, y: 398, z: -710 },
 
   // === RAIDERS HOME REGION – "Harkanis Fringe" (bottom-left, far front) ===
-  { id: "harkanis",        name: "Harkanis",        x: -225, y: -130, z:  820 },
-  { id: "emberhold",       name: "Emberhold",       x: -260, y: -190, z:  900 },
-  { id: "magnus_relay",    name: "Magnus Relay",    x: -190, y:  -80, z:  740 },
+  { id: "harkanis",        name: "Harkanis",        x: -304, y: -176, z:  787 },
+  { id: "emberhold",       name: "Emberhold",       x: -351, y: -256, z:  864 },
+  { id: "magnus_relay",    name: "Magnus Relay",    x: -256, y: -108, z:  710 },
 
   // === ATTACKERS HOME REGION – "Karst Expanse" (bottom-right, shallow back) ===
-  { id: "karst_forge",     name: "Karst Forge",     x:  225, y: -130, z: -180 },
-  { id: "veldras_gate",    name: "Veldras Gate",    x:  275, y: -170, z:  -80 },
-  { id: "kethrax_deep",    name: "Kethrax Deep",    x:  190, y:  -80, z: -260 },
+  { id: "karst_forge",     name: "Karst Forge",     x:  304, y: -176, z: -173 },
+  { id: "veldras_gate",    name: "Veldras Gate",    x:  371, y: -230, z:  -77 },
+  { id: "kethrax_deep",    name: "Kethrax Deep",    x:  256, y: -108, z: -250 },
 
   // === WILD SPACE – central contested region (around 0) ===
-  { id: "voryn_crossing",  name: "Voryn Crossing",  x:   0,  y:   0,  z:    0 },
-  { id: "osiron_spur",     name: "Osiron Spur",     x:  60, y:  30, z:   80 },
-  { id: "duskfall_watch",  name: "Duskfall Watch",  x: -70, y:  25, z:  -60 },
-  { id: "vorun_halo",      name: "Vorun Halo",      x:  40, y: -80, z:  120 },
-  { id: "cinder_wake",     name: "Cinder Wake",     x: -55, y: -60, z: -140 },
-  { id: "silas_gate",      name: "Silas Gate",      x:  80, y:  50, z:  -20 },
-  { id: "threnos_void",    name: "Threnos Void",    x: -90, y:  40, z:  140 },
-  { id: "helios_spine",    name: "Helios Spine",    x:  10, y: -110, z:  -40 },
-  { id: "nadir_outpost",   name: "Nadir Outpost",   x: -40, y:  20, z: -120 }
+  { id: "voryn_crossing",  name: "Voryn Crossing",  x:   0,  y:   0, z:    0 },
+  { id: "osiron_spur",     name: "Osiron Spur",     x:  81, y:  40, z:   77 },
+  { id: "duskfall_watch",  name: "Duskfall Watch",  x: -94, y:  34, z:  -58 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x:  54, y: -108, z:  115 },
+  { id: "cinder_wake",     name: "Cinder Wake",     x: -74, y: -81, z: -134 },
+  { id: "silas_gate",      name: "Silas Gate",      x: 108, y:  68, z:  -19 },
+  { id: "threnos_void",    name: "Threnos Void",    x: -122, y:  54, z:  134 },
+  { id: "helios_spine",    name: "Helios Spine",    x:  14, y: -148, z:  -38 },
+  { id: "nadir_outpost",   name: "Nadir Outpost",   x: -54, y:  27, z: -115 }
 ];
+
 
 // Warp lanes reworked to match these positions and keep the graph readable.
 const WARP_LANES = [
