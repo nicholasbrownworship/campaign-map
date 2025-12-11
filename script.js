@@ -33,8 +33,6 @@ const TERRITORIES = [
   { id: "nadir_outpost",   name: "Nadir Outpost",   x:  299, y:  637, z:  375 }
 ];
 
-
-
 const WARP_LANES = [
   // === DEFENDER HOME – Bastior Reach (triangle) ===
   ["bastior_prime",  "trinaxis_minor"],
@@ -51,22 +49,27 @@ const WARP_LANES = [
   ["veldras_gate",   "kethrax_deep"],
   ["kethrax_deep",   "karst_forge"],
 
-  // === Home → Wild-space connections (closest sensible gates) ===
+  // === MAJOR HYPERLANES BETWEEN STARTER REGIONS ===
+  ["bastior_prime",  "harkanis"],
+  ["harkanis",       "karst_forge"],
+  ["karst_forge",    "bastior_prime"],
 
-  // Defenders drop into wild space via the “upper / back” side
-  ["bastior_prime",  "duskfall_watch"],   // forward toward the core
-  ["trinaxis_minor", "silas_gate"],       // diagonal toward high-Y wild
-  ["aurum_refuge",   "voryn_crossing"],   // direct line to the true center
+  // === Home → Wild-space connections (primary gates) ===
+
+  // Defenders drop into wild space via the “upper/back” side
+  ["bastior_prime",  "duskfall_watch"],
+  ["trinaxis_minor", "silas_gate"],
+  ["aurum_refuge",   "voryn_crossing"],
 
   // Raiders come down into the wild cluster near the high-Y worlds
-  ["harkanis",       "nadir_outpost"],    // high-Y, similar Z
+  ["harkanis",       "nadir_outpost"],
   ["emberhold",      "nadir_outpost"],
-  ["magnus_relay",   "silas_gate"],       // high-Y, slightly “behind” the front
+  ["magnus_relay",   "silas_gate"],
 
   // Attackers rise into wild space via the low-Y side
-  ["karst_forge",    "helios_spine"],     // closest low-Y wild world
-  ["veldras_gate",   "osiron_spur"],      // slants up toward the core
-  ["kethrax_deep",   "threnos_void"],     // similar X/Z, mid-depth
+  ["karst_forge",    "helios_spine"],
+  ["veldras_gate",   "osiron_spur"],
+  ["kethrax_deep",   "threnos_void"],
 
   // === Wild-space web – 3D routes around the core ===
 
@@ -92,13 +95,12 @@ const WARP_LANES = [
   ["threnos_void",   "vorun_halo"],
   ["threnos_void",   "voryn_crossing"],
 
-  // High-Y wild outpost
+  // High-Y wild outpost (and extra hook back to Raiders)
   ["nadir_outpost",  "silas_gate"],
-  ["nadir_outpost",  "harkanis"]          // also a home-region shortcut
+  ["nadir_outpost",  "harkanis"]
 ];
 
-
-// Distinct planet base colors (identity)
+// Distinct planet base colors (identity) – unchanged
 const PLANET_BASE_COLORS = {
   bastior_prime:  0xffe08a,
   trinaxis_minor: 0x7ad0ff,
@@ -124,28 +126,34 @@ const PLANET_BASE_COLORS = {
 };
 
 // Planet size factors (relative to base radius)
+// - Home worlds = biggest in their 3-planet region
+// - Several wild-space worlds are even larger overall
 const PLANET_SIZE_FACTORS = {
-  bastior_prime:  1.7,
-  trinaxis_minor: 1.4,
+  // Bastior Reach – Defenders (home largest)
+  bastior_prime:  1.8,
+  trinaxis_minor: 1.3,
   aurum_refuge:   1.4,
 
-  harkanis:       1.6,
+  // Harkanis Fringe – Raiders (home largest)
+  harkanis:       1.7,
   emberhold:      1.3,
-  magnus_relay:   1.3,
+  magnus_relay:   1.2,
 
-  karst_forge:    1.6,
-  veldras_gate:   1.4,
+  // Karst Expanse – Attackers (home largest)
+  karst_forge:    1.7,
+  veldras_gate:   1.3,
   kethrax_deep:   1.4,
 
-  voryn_crossing: 1.3,
-  osiron_spur:    1.2,
-  duskfall_watch: 1.2,
-  vorun_halo:     1.2,
-  cinder_wake:    1.1,
-  silas_gate:     1.1,
-  threnos_void:   1.1,
-  helios_spine:   1.2,
-  nadir_outpost:  1.1
+  // Wild space – mix of sizes, some bigger than home worlds
+  voryn_crossing: 2.0, // massive central hub
+  osiron_spur:    1.4,
+  duskfall_watch: 1.8, // big forward wild-space anchor
+  vorun_halo:     1.5,
+  cinder_wake:    1.3,
+  silas_gate:     1.4,
+  threnos_void:   1.5,
+  helios_spine:   1.9, // huge “spine” world
+  nadir_outpost:  1.2
 };
 
 
