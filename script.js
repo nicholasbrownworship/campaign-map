@@ -26,7 +26,7 @@ const TERRITORIES = [
   { id: "voryn_crossing",  name: "Voryn Crossing",  x:   0,  y:   0,  z:   0 },
   { id: "osiron_spur",     name: "Osiron Spur",     x:  60, y:  30, z:  40 },
   { id: "duskfall_watch",  name: "Duskfall Watch",  x: -70, y:  25, z: -35 },
-  { id: "vorun_halo",      name: "Vorun Halo",      x:  40, y: -80, z:  60 },
+  { id: "vorun_halo",      name: "Vorun Halo",      x:  40, y: -80, z:  -6000 },
   { id: "cinder_wake",     name: "Cinder Wake",     x: -55, y: -60, z: -45 },
   { id: "silas_gate",      name: "Silas Gate",      x:  80, y:  50, z: -20 },
   { id: "threnos_void",    name: "Threnos Void",    x: -90, y:  40, z:  70 },
